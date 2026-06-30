@@ -50,6 +50,7 @@ CREATE TABLE IF NOT EXISTS songs (
     syncedLyrics TEXT,
 
     playCount INTEGER NOT NULL DEFAULT 0,
+    downloads INTEGER NOT NULL DEFAULT 0,
 
     isDisabled INTEGER NOT NULL DEFAULT 0,
     disabledDescription TEXT,

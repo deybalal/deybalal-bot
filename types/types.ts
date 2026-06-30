@@ -15,6 +15,7 @@ export type Song = {
   lyrics?: string | null;
   syncedLyrics?: string | null;
   playCount: number;
+  downloads: number;
   isDisabled: boolean;
   disabledDescription?: string | null;
   isActive: boolean;

@@ -21,6 +21,7 @@ INSERT OR REPLACE INTO songs (
     lyrics,
     syncedLyrics,
     playCount,
+    downloads,
     isDisabled,
     disabledDescription,
     isActive,
@@ -76,6 +77,7 @@ const transaction = db.transaction((items: Song[]) => {
       song.syncedLyrics,
 
       song.playCount,
+      song.downloads ?? 0,
 
       Number(song.isDisabled),
       song.disabledDescription,
