@@ -205,3 +205,14 @@ LIMIT 1
     },
   };
 }
+
+export function getSongsByArtistId(artistId: string): Song[] {
+  const stmt = db.query(`
+    SELECT *
+    FROM songs
+    WHERE artists LIKE ?
+    ORDER BY title
+  `);
+
+  return stmt.all(`%"id":"${artistId}"%`) as Song[];
+}

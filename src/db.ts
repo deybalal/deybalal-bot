@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS songs (
 
     artist TEXT NOT NULL,
     artistEn TEXT,
+    artists TEXT NOT NULL,
 
     albumName TEXT,
 

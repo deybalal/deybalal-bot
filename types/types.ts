@@ -5,6 +5,7 @@ export type Song = {
   titleEn?: string | null;
   artist: string;
   artistEn?: string | null;
+  artists: { id: string }[];
   albumName?: string | null;
   coverArt: string;
   year: number;

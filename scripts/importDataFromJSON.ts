@@ -11,6 +11,7 @@ INSERT OR REPLACE INTO songs (
     titleEn,
     artist,
     artistEn,
+    artists,
     albumName,
     coverArt,
     year,
@@ -41,7 +42,7 @@ INSERT OR REPLACE INTO songs (
     updatedAt
 )
 VALUES (
-    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, unixepoch()
+    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, unixepoch()
 );
 `);
 
@@ -59,6 +60,7 @@ const transaction = db.transaction((items: Song[]) => {
 
       song.artist,
       song.artistEn,
+      JSON.stringify(song.artists || []),
 
       song.albumName,
 

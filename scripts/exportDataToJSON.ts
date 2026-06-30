@@ -51,6 +51,7 @@ export async function exportSongsToJson(): Promise<string> {
 
       artist: song.artist,
       artistEn: song.artistEn,
+      artists: song.artists ? JSON.parse(song.artists) : [],
 
       albumName: song.albumName,
 
