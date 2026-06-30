@@ -88,6 +88,16 @@ CREATE INDEX IF NOT EXISTS idx_title ON songs(title);
 CREATE INDEX IF NOT EXISTS idx_titleEn ON songs(titleEn);
 CREATE INDEX IF NOT EXISTS idx_slug ON songs(slug);
 
+CREATE TABLE IF NOT EXISTS user_favorites (
+  user_id INTEGER NOT NULL,
+  song_id TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
+
+  FOREIGN KEY(user_id)
+  REFERENCES users(telegram_id)
+  ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS telegram_files (
 
     songId TEXT NOT NULL,

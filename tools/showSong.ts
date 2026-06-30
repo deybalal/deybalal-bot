@@ -3,8 +3,17 @@ import type { TelegramSongWithFiles } from "../types/types";
 import { formatDuration } from "./formatDuration";
 import { formatBytes } from "./formatBytes";
 import { getArtistById } from "./getArtistName";
+import { isFavorite } from "../src/dbUtils";
 
-export async function showSong(ctx: Context, song: TelegramSongWithFiles) {
+export async function showSong(
+  ctx: Context,
+  song: TelegramSongWithFiles,
+  send: boolean = true
+) {
+  const userId = ctx.from?.id;
+
+  const isSongInFavorites = isFavorite(userId || 0, song.id);
+
   const text = `
 🎵 <b>${song.title}</b>
 
@@ -18,20 +27,23 @@ export async function showSong(ctx: Context, song: TelegramSongWithFiles) {
 • 128 kbps — ${song.bytes128 ? formatBytes(song.bytes128) : "❌"}
 • 320 kbps — ${song.bytes320 ? formatBytes(song.bytes320) : "❌"}
 
+${isSongInFavorites ? "✅ این آهنگ در لیست علاقه‌مندی‌های شما وجود دارد." : ""}
+
 یکی از گزینه‌های زیر را انتخاب کنید.
 `;
 
-  console.log("song.artists ", song.artists);
-
   const parsedArtists = JSON.parse(song.artists as unknown as string);
-  console.log("parsedArtists ", parsedArtists);
 
   const kb = new InlineKeyboard();
   kb.text("⬇️ 64", `d:${song.id}:64`);
   kb.text("⬇️ 128", `d:${song.id}:128`);
   kb.text("⬇️ 320", `d:${song.id}:320`).row();
   kb.text("🎧 پیش‌نمایش", `p:${song.id}`).row();
-  kb.text("♥ افزودن به علاقه مندی", `f:${song.id}`).row();
+  if (isSongInFavorites) {
+    kb.text("💔 حذف از علاقه مندی", `f:remove:${song.id}`).row();
+  } else {
+    kb.text("❤️ افزودن به علاقه مندی", `f:add:${song.id}`).row();
+  }
   if (parsedArtists.length <= 1) {
     kb.text(`🎤 ${song.artist}`, `a:${parsedArtists[0]?.id}:0`).row();
   } else if (parsedArtists.length > 1) {
@@ -42,9 +54,13 @@ export async function showSong(ctx: Context, song: TelegramSongWithFiles) {
   }
   kb.text("🔗 اشتراک‌گذاری", `sh:${song.id}`);
 
-  await ctx.replyWithPhoto(song.telegram.coverArt?.fileId || "", {
-    caption: text,
-    parse_mode: "HTML",
-    reply_markup: kb,
-  });
+  if (send) {
+    await ctx.replyWithPhoto(song.telegram.coverArt?.fileId || "", {
+      caption: text,
+      parse_mode: "HTML",
+      reply_markup: kb,
+    });
+  } else {
+    return { caption: text, parse_mode: "HTML", reply_markup: kb };
+  }
 }

@@ -245,3 +245,84 @@ LIMIT 1;
     },
   };
 }
+
+export function incrementSongDownloads(id: string) {
+  db.prepare(
+    `
+    UPDATE songs
+    SET downloads = downloads + 1
+    WHERE id = ?
+  `
+  ).run(id);
+}
+
+export function incrementViewCount(id: string) {
+  db.prepare(
+    `
+    UPDATE songs
+    SET playCount = playCount + 1
+    WHERE id = ?
+  `
+  ).run(id);
+}
+
+export function addFavorite(userId: number, songId: string) {
+  console.log("userId, ", userId);
+  db.prepare(
+    `
+    INSERT OR IGNORE INTO user_favorites
+    (user_id, song_id, created_at)
+    VALUES (?, ?, ?)
+  `
+  ).run(userId, songId, Date.now());
+}
+
+export function removeFavorite(userId: number, songId: string) {
+  db.prepare(
+    `
+    DELETE FROM user_favorites
+    WHERE user_id = ? AND song_id = ?
+  `
+  ).run(userId, songId);
+}
+
+export function isFavorite(userId: number, songId: string): boolean {
+  const row = db
+    .prepare(
+      `
+    SELECT 1
+    FROM user_favorites
+    WHERE user_id = ? AND song_id = ?
+    LIMIT 1
+  `
+    )
+    .get(userId, songId);
+
+  return !!row;
+}
+
+export function getFavoriteSongs(userId: number): TelegramSongWithFiles[] {
+  const songs = db
+    .prepare(
+      `
+    SELECT s.*
+    FROM songs s
+    INNER JOIN user_favorites f
+      ON s.id = f.song_id
+    WHERE f.user_id = ?
+    ORDER BY f.created_at DESC
+  `
+    )
+    .all(userId) as Song[];
+
+  return songs.map((song) => ({
+    ...song,
+    telegram: {
+      coverArt: getTelegramFile(song.id, "photo", null),
+      ogg: getTelegramFile(song.id, "voice", null),
+      "64": getTelegramFile(song.id, "audio", "64"),
+      "128": getTelegramFile(song.id, "audio", "128"),
+      "320": getTelegramFile(song.id, "audio", "320"),
+    },
+  }));
+}
