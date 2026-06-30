@@ -55,3 +55,14 @@ export type TelegramSongWithFiles = Song & {
     "320": TelegramFile | null;
   };
 };
+
+export type Artist = {
+  id: string;
+  name: string;
+  nameEn?: string | null;
+  slug: string;
+  description?: string | null;
+  image?: string | null;
+  createdAt: number;
+  updatedAt: number;
+};

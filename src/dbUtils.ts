@@ -208,11 +208,40 @@ LIMIT 1
 
 export function getSongsByArtistId(artistId: string): Song[] {
   const stmt = db.query(`
-    SELECT *
-    FROM songs
-    WHERE artists LIKE ?
-    ORDER BY title
-  `);
+        SELECT *
+        FROM songs
+        WHERE artists LIKE ?
+        ORDER BY title
+    `);
 
   return stmt.all(`%"id":"${artistId}"%`) as Song[];
+}
+
+export function getRandomSongByArtistId(
+  artistId: string
+): TelegramSongWithFiles | null {
+  const song = db
+    .query(
+      `
+SELECT *
+FROM songs
+WHERE artists LIKE ?
+ORDER BY RANDOM()
+LIMIT 1;
+`
+    )
+    .get(`%"id":"${artistId}"%`) as Song | null;
+
+  if (!song) return null;
+
+  return {
+    ...song,
+    telegram: {
+      coverArt: getTelegramFile(song.id, "photo", null),
+      ogg: getTelegramFile(song.id, "voice", null),
+      "64": getTelegramFile(song.id, "audio", "64"),
+      "128": getTelegramFile(song.id, "audio", "128"),
+      "320": getTelegramFile(song.id, "audio", "320"),
+    },
+  };
 }

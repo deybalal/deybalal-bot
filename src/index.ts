@@ -1,13 +1,18 @@
 import { Bot, InlineKeyboard } from "grammy";
 import "dotenv/config";
 import { serve } from "@hono/node-server";
-
 import { Hono } from "hono";
-import { ensureUser, getRandomSong, getSongById, getStats } from "./dbUtils";
+import {
+  ensureUser,
+  getRandomSong,
+  getRandomSongByArtistId,
+  getSongById,
+  getSongsByArtistId,
+  getStats,
+} from "./dbUtils";
 import { db } from "./db";
-import { formatBytes } from "../tools/formatBytes";
-import { formatDuration } from "../tools/formatDuration";
 import { showSong } from "../tools/showSong";
+import { getArtistById } from "../tools/getArtistName";
 
 const app = new Hono();
 
@@ -141,6 +146,105 @@ bot.callbackQuery(/^sh:(.+)$/, async (ctx) => {
       reply_markup: inline,
     }
   );
+});
+
+bot.callbackQuery(/^a:(.+):(\d+)$/, async (ctx) => {
+  await ctx.answerCallbackQuery();
+
+  try {
+    const artistId = ctx.match[1];
+    const page = parseInt(ctx.match[2] || "0");
+
+    if (!artistId) {
+      await ctx.answerCallbackQuery("هنرمند مورد نظر یافت نشد!");
+      return;
+    }
+
+    const songs = getSongsByArtistId(artistId);
+
+    if (!songs.length) {
+      await ctx.answerCallbackQuery("آهنگی برای این هنرمند پیدا نشد!");
+      return;
+    }
+
+    console.log("songs ", songs.length);
+    const artist = await getArtistById(artistId);
+    const artistName = artist?.name || "هنرمند"; // fallback if needed
+    const artistNameEn = artist?.nameEn || "artist";
+
+    const PAGE_SIZE = 20;
+    const start = page * PAGE_SIZE;
+    const end = start + PAGE_SIZE;
+
+    const pageSongs = songs.slice(start, end);
+
+    console.log("pageSongs ", pageSongs.length);
+    const buttons = pageSongs.map((song) => [
+      {
+        text: `🎵 ${song.title}`,
+        callback_data: `s:${song.id}`,
+      },
+    ]);
+
+    const navButtons = [];
+
+    if (page > 0) {
+      navButtons.push({
+        text: "⬅️ قبلی",
+        callback_data: `a:${artistId}:${page - 1}`,
+      });
+    }
+
+    const hasNext = end < songs.length;
+
+    if (hasNext) {
+      navButtons.push({
+        text: "بعدی ➡️",
+        callback_data: `a:${artistId}:${page + 1}`,
+      });
+    }
+
+    const extraButtons = [
+      {
+        text: "🎲 پخش تصادفی",
+        callback_data: `arand:${artistId}`,
+      },
+    ];
+
+    await ctx.editMessageReplyMarkup({
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: `🎤 ${artistName}`, callback_data: `a:${artistId}:0` }],
+          ...buttons,
+          navButtons.length ? navButtons : [],
+          extraButtons,
+          [{ text: "🔙 بازگشت", callback_data: "home" }],
+        ],
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    await ctx.answerCallbackQuery("خطا در بارگذاری آهنگ‌ها!");
+  }
+});
+
+bot.callbackQuery(/^arand:(.+)$/, async (ctx) => {
+  await ctx.answerCallbackQuery();
+
+  const artistId = ctx.match[1];
+
+  if (!artistId) {
+    await ctx.answerCallbackQuery("هنرمند مورد نظر یافت نشد!");
+    return;
+  }
+
+  const random = getRandomSongByArtistId(artistId);
+
+  if (!random) {
+    await ctx.answerCallbackQuery("آهنگی پیدا نشد!");
+    return;
+  }
+  showSong(ctx, random);
 });
 
 bot.command("users", async (ctx) => {

@@ -2,6 +2,7 @@ import { InlineKeyboard, type Context } from "grammy";
 import type { TelegramSongWithFiles } from "../types/types";
 import { formatDuration } from "./formatDuration";
 import { formatBytes } from "./formatBytes";
+import { getArtistById } from "./getArtistName";
 
 export async function showSong(ctx: Context, song: TelegramSongWithFiles) {
   const text = `
@@ -20,21 +21,30 @@ export async function showSong(ctx: Context, song: TelegramSongWithFiles) {
 یکی از گزینه‌های زیر را انتخاب کنید.
 `;
 
-  const inline = new InlineKeyboard()
-    .text("⬇️ 64", `d:${song.id}:64`)
-    .text("⬇️ 128", `d:${song.id}:128`)
-    .text("⬇️ 320", `d:${song.id}:320`)
-    .row()
-    .text("🎧 پیش‌نمایش", `p:${song.id}`)
-    .row()
-    .text("♥ افزودن به علاقه مندی", `f:${song.id}`)
-    .row()
-    .text("🔎 خواننده", `artist:${song.artistEn}`)
-    .text("🔗 اشتراک‌گذاری", `sh:${song.id}`);
+  console.log("song.artists ", song.artists);
+
+  const parsedArtists = JSON.parse(song.artists as unknown as string);
+  console.log("parsedArtists ", parsedArtists);
+
+  const kb = new InlineKeyboard();
+  kb.text("⬇️ 64", `d:${song.id}:64`);
+  kb.text("⬇️ 128", `d:${song.id}:128`);
+  kb.text("⬇️ 320", `d:${song.id}:320`).row();
+  kb.text("🎧 پیش‌نمایش", `p:${song.id}`).row();
+  kb.text("♥ افزودن به علاقه مندی", `f:${song.id}`).row();
+  if (parsedArtists.length <= 1) {
+    kb.text(`🎤 ${song.artist}`, `a:${parsedArtists[0]?.id}:0`).row();
+  } else if (parsedArtists.length > 1) {
+    for (const item of parsedArtists) {
+      const artist = await getArtistById(item.id);
+      kb.text(`🎤 ${artist?.name || "خواننده"}`, `a:${item.id}:0`).row();
+    }
+  }
+  kb.text("🔗 اشتراک‌گذاری", `sh:${song.id}`);
 
   await ctx.replyWithPhoto(song.telegram.coverArt?.fileId || "", {
     caption: text,
     parse_mode: "HTML",
-    reply_markup: inline,
+    reply_markup: kb,
   });
 }
