@@ -111,3 +111,20 @@ ON telegram_files(songId);
 CREATE INDEX IF NOT EXISTS idx_tg_type
 ON telegram_files(type);
 `);
+
+db.exec(`CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+    telegram_id INTEGER NOT NULL UNIQUE,
+    username TEXT,
+
+    first_name TEXT NOT NULL,
+    last_name TEXT,
+
+    language_code TEXT,
+    is_premium INTEGER DEFAULT 0,
+    is_bot INTEGER DEFAULT 0,
+
+    started_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+);`);

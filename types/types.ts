@@ -44,3 +44,13 @@ export type TelegramFile = {
   fileUniqueId?: string | null;
   uploadedAt?: number | null;
 };
+
+export type TelegramSongWithFiles = Song & {
+  telegram: {
+    coverArt: TelegramFile | null;
+    ogg: TelegramFile | null;
+    "64": TelegramFile | null;
+    "128": TelegramFile | null;
+    "320": TelegramFile | null;
+  };
+};
