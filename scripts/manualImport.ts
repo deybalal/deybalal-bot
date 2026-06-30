@@ -10,7 +10,7 @@ const saveTx = db.transaction(
     fileId: string,
     uniqueId: string
   ) => {
-    saveTelegramFile.run(songId, type, quality, fileId, uniqueId);
+    saveTelegramFile(songId, type, quality, fileId, uniqueId);
   }
 );
 

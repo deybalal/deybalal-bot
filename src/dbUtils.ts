@@ -1,21 +1,47 @@
 import { db } from "./db";
+import type { Song, TelegramFile } from "../types/types";
 
-export const getSongs = db.query(`
+export function getSongs(): Song[] {
+  return db
+    .query(
+      `
 SELECT *
 FROM songs
 ORDER BY songIndex ASC;
-`);
+`
+    )
+    .all() as Song[];
+}
 
-export const getTelegramFile = db.prepare(`
+export function getTelegramFile(
+  songId: string,
+  type: string,
+  quality: string | null
+): TelegramFile | null {
+  return db
+    .prepare(
+      `
 SELECT *
 FROM telegram_files
 WHERE songId = ?
 AND type = ?
 AND quality IS ?
 LIMIT 1;
-`);
+  `
+    )
+    .get(songId, type, quality) as TelegramFile | null;
+}
 
-export const saveTelegramFile = db.prepare(`
+export function saveTelegramFile(
+  songId: string,
+  type: string,
+  quality: string | null,
+  fileId: string,
+  fileUniqueId: string
+) {
+  return db
+    .prepare(
+      `
 INSERT INTO telegram_files (
     songId,
     type,
@@ -32,4 +58,7 @@ DO UPDATE SET
 fileId = excluded.fileId,
 fileUniqueId = excluded.fileUniqueId,
 uploadedAt = excluded.uploadedAt;
-`);
+`
+    )
+    .run(songId, type, quality, fileId, fileUniqueId);
+}
