@@ -102,7 +102,7 @@ CREATE TABLE IF NOT EXISTS telegram_files (
 
     songId TEXT NOT NULL,
     type TEXT NOT NULL,
-    quality TEXT,
+    quality TEXT NOT NULL DEFAULT '',
 
     fileId TEXT,
     fileUniqueId TEXT,

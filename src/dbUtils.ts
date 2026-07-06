@@ -91,6 +91,19 @@ ORDER BY songIndex ASC;
     .all() as Song[];
 }
 
+export function logger(): TelegramFile[] | null {
+  return db
+    .query(
+      `
+SELECT *
+FROM telegram_files
+WHERE songId = 'cmnizfvcz02tnuigphwl1ndyw'
+  AND type = 'photo';
+`
+    )
+    .all() as TelegramFile[] | null;
+}
+
 export function getTelegramFile(
   songId: string,
   type: string,
@@ -141,6 +154,23 @@ uploadedAt = excluded.uploadedAt;
     .run(songId, type, quality, fileId, fileUniqueId);
 }
 
+export function deleteTelegramFile(
+  songId: string,
+  type: string,
+  quality: string | null
+) {
+  return db
+    .prepare(
+      `
+      DELETE FROM telegram_files
+      WHERE songId = ?
+        AND type = ?
+        AND quality IS ?;
+    `
+    )
+    .run(songId, type, quality);
+}
+
 export function getRandomSong(): TelegramSongWithFiles | null {
   const song = db
     .query(
@@ -158,8 +188,8 @@ LIMIT 1;
   return {
     ...song,
     telegram: {
-      coverArt: getTelegramFile(song.id, "photo", null),
-      ogg: getTelegramFile(song.id, "voice", null),
+      coverArt: getTelegramFile(song.id, "photo", ""),
+      ogg: getTelegramFile(song.id, "voice", ""),
       "64": getTelegramFile(song.id, "audio", "64"),
       "128": getTelegramFile(song.id, "audio", "128"),
       "320": getTelegramFile(song.id, "audio", "320"),
@@ -197,8 +227,8 @@ LIMIT 1
   return {
     ...song,
     telegram: {
-      coverArt: getTelegramFile(song.id, "photo", null),
-      ogg: getTelegramFile(song.id, "voice", null),
+      coverArt: getTelegramFile(song.id, "photo", ""),
+      ogg: getTelegramFile(song.id, "voice", ""),
       "64": getTelegramFile(song.id, "audio", "64"),
       "128": getTelegramFile(song.id, "audio", "128"),
       "320": getTelegramFile(song.id, "audio", "320"),
@@ -237,8 +267,8 @@ LIMIT 1;
   return {
     ...song,
     telegram: {
-      coverArt: getTelegramFile(song.id, "photo", null),
-      ogg: getTelegramFile(song.id, "voice", null),
+      coverArt: getTelegramFile(song.id, "photo", ""),
+      ogg: getTelegramFile(song.id, "voice", ""),
       "64": getTelegramFile(song.id, "audio", "64"),
       "128": getTelegramFile(song.id, "audio", "128"),
       "320": getTelegramFile(song.id, "audio", "320"),
@@ -318,8 +348,8 @@ export function getFavoriteSongs(userId: number): TelegramSongWithFiles[] {
   return songs.map((song) => ({
     ...song,
     telegram: {
-      coverArt: getTelegramFile(song.id, "photo", null),
-      ogg: getTelegramFile(song.id, "voice", null),
+      coverArt: getTelegramFile(song.id, "photo", ""),
+      ogg: getTelegramFile(song.id, "voice", ""),
       "64": getTelegramFile(song.id, "audio", "64"),
       "128": getTelegramFile(song.id, "audio", "128"),
       "320": getTelegramFile(song.id, "audio", "320"),
