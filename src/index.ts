@@ -14,10 +14,12 @@ import {
   incrementSongDownloads,
   incrementViewCount,
   removeFavorite,
+  searchSongs,
 } from "./dbUtils";
 import { db } from "./db";
 import { showSong } from "../tools/showSong";
 import { getArtistById } from "../tools/getArtistName";
+import { sendSearchResults } from "../tools/sendSearchResults";
 
 const app = new Hono();
 
@@ -43,7 +45,9 @@ bot.command("start", async (ctx) => {
   const stats = getStats();
 
   const inline = new InlineKeyboard()
+    .text("🔍 جستجو", "search_prompt")
     .text("🎵 موزیک تصادفی", "random")
+    .row()
     .text("⭐علاقه‌مندی ها", "favorites:0")
     .row()
     .text("درباره", "about")
@@ -98,6 +102,43 @@ bot.callbackQuery(/^f:add:(.+)$/, async (ctx) => {
 
 bot.callbackQuery("no_callback", async (ctx) => {
   await ctx.answerCallbackQuery();
+});
+
+bot.callbackQuery("search_prompt", async (ctx) => {
+  await ctx.answerCallbackQuery();
+  await ctx.reply(
+    "🔍 متن مورد نظر خود را ارسال کنید.\n\nمثال: <b>کوروش اسدپور</b> یا <b>بختیاری</b>",
+    { parse_mode: "HTML" }
+  );
+});
+
+bot.callbackQuery("home", async (ctx) => {
+  await ctx.answerCallbackQuery();
+
+  const stats = getStats();
+
+  const inline = new InlineKeyboard()
+    .text("🔍 جستجو", "search_prompt")
+    .text("🎵 موزیک تصادفی", "random")
+    .row()
+    .text("⭐علاقه‌مندی ها", "favorites:0")
+    .row()
+    .text("درباره", "about")
+    .row()
+    .text("تنظیمات", "settings");
+
+  let text = `🎵 خش اومیی همتبار!
+
+ربات تلگرام دی بلال،
+
+🎧  ${stats.songs.toLocaleString()} آهنگ داره!
+🎤  ${stats.artists.toLocaleString()} خواننده داره!
+
+می‌تونی با عنوان یا خواننده جستجو کنی، موزیک تصادفی ببینی و آهنگ‌ هارو با کیفیت‌های مختلف دانلود کنی.
+
+\n✨ از اینکه از دی بلال استفاده میکنی، ممنونیم!`;
+
+  await ctx.editMessageText(text, { reply_markup: inline });
 });
 
 bot.callbackQuery("random", async (ctx) => {
@@ -372,6 +413,109 @@ bot.callbackQuery(/^arand:(.+)$/, async (ctx) => {
     return;
   }
   showSong(ctx, random);
+});
+
+bot.command("search", async (ctx) => {
+  ensureUser(ctx.from!);
+  const query = ctx.match?.trim();
+
+  if (!query) {
+    await ctx.reply(
+      "🔍 لطفاً عبارت جستجو را وارد کنید.\n\nمثال: <code>/search بهرام</code>",
+      { parse_mode: "HTML" }
+    );
+    return;
+  }
+
+  const songs = searchSongs(query);
+
+  if (songs.length === 0) {
+    await ctx.reply(`🔍 نتیجه‌ای برای "<b>${query}</b>" پیدا نشد.`, {
+      parse_mode: "HTML",
+    });
+    return;
+  }
+
+  await sendSearchResults(ctx, query, 0, songs);
+});
+
+bot.on("message:text", async (ctx) => {
+  const text = ctx.message.text.trim();
+
+  if (text.startsWith("/")) return;
+
+  ensureUser(ctx.from!);
+
+  const songs = searchSongs(text);
+
+  if (songs.length === 0) {
+    await ctx.reply(`🔍 نتیجه‌ای برای "<b>${text}</b>" پیدا نشد.`, {
+      parse_mode: "HTML",
+    });
+    return;
+  }
+
+  await sendSearchResults(ctx, text, 0, songs);
+});
+
+bot.callbackQuery(/^search:(.+):(\d+)$/, async (ctx) => {
+  await ctx.answerCallbackQuery();
+
+  const query = ctx.match[1]!;
+  const page = parseInt(ctx.match[2] || "0");
+
+  const songs = searchSongs(query);
+
+  if (songs.length === 0) {
+    await ctx.answerCallbackQuery("نتیجه‌ای پیدا نشد!");
+    return;
+  }
+
+  const PAGE_SIZE = 20;
+  const start = page * PAGE_SIZE;
+  const end = start + PAGE_SIZE;
+  const pageSongs = songs.slice(start, end);
+
+  const buttons = pageSongs.map((song: any) => [
+    {
+      text: `🎵 ${song.title} — ${song.artist}`,
+      callback_data: `s:${song.id}`,
+    },
+  ]);
+
+  const navButtons = [];
+
+  if (page > 0) {
+    navButtons.push({
+      text: "⬅️ قبلی",
+      callback_data: `search:${query}:${page - 1}`,
+    });
+  }
+
+  const hasNext = end < songs.length;
+
+  if (hasNext) {
+    navButtons.push({
+      text: "بعدی ➡️",
+      callback_data: `search:${query}:${page + 1}`,
+    });
+  }
+
+  await ctx.editMessageReplyMarkup({
+    reply_markup: {
+      inline_keyboard: [
+        [
+          {
+            text: `🔍 ${songs.length} نتیجه برای "${query}"`,
+            callback_data: "no_callback",
+          },
+        ],
+        ...buttons,
+        navButtons.length ? navButtons : [],
+        [{ text: "🔙 بازگشت", callback_data: "home" }],
+      ],
+    },
+  });
 });
 
 bot.command("users", async (ctx) => {

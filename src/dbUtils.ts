@@ -276,6 +276,32 @@ LIMIT 1;
   };
 }
 
+export function searchSongs(query: string, limit: number = 50): Song[] {
+  const pattern = `%${query}%`;
+  return db
+    .query(
+      `
+SELECT *
+FROM songs
+WHERE title LIKE ?
+   OR titleEn LIKE ?
+   OR artist LIKE ?
+   OR artistEn LIKE ?
+ORDER BY
+  CASE
+    WHEN title LIKE ? THEN 0
+    WHEN artist LIKE ? THEN 1
+    WHEN titleEn LIKE ? THEN 2
+    WHEN artistEn LIKE ? THEN 3
+    ELSE 4
+  END,
+  playCount DESC
+LIMIT ?
+`
+    )
+    .all(pattern, pattern, pattern, pattern, pattern, pattern, pattern, pattern, limit) as Song[];
+}
+
 export function incrementSongDownloads(id: string) {
   db.prepare(
     `
