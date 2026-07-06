@@ -97,8 +97,7 @@ export function logger(): TelegramFile[] | null {
       `
 SELECT *
 FROM telegram_files
-WHERE songId = 'cmnizfvcz02tnuigphwl1ndyw'
-  AND type = 'photo';
+WHERE songId = 'cmnizd6vf023wuigpy7h1hzmv'
 `
     )
     .all() as TelegramFile[] | null;
@@ -299,7 +298,17 @@ ORDER BY
 LIMIT ?
 `
     )
-    .all(pattern, pattern, pattern, pattern, pattern, pattern, pattern, pattern, limit) as Song[];
+    .all(
+      pattern,
+      pattern,
+      pattern,
+      pattern,
+      pattern,
+      pattern,
+      pattern,
+      pattern,
+      limit
+    ) as Song[];
 }
 
 export function incrementSongDownloads(id: string) {

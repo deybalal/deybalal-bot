@@ -80,7 +80,12 @@ for (const song of songs) {
   if (!exists(song.id, "audio", "64")) {
     const msg = await bot.api.sendAudio(
       STORAGE_CHAT_ID,
-      new InputFile(path.join(ROOT, song.link64!))
+      new InputFile(path.join(ROOT, song.link64!)),
+      {
+        title: song.title,
+        performer: song.artist,
+        duration: song.duration,
+      }
     );
 
     saveTx(song.id, "audio", "64", msg.audio.file_id, msg.audio.file_unique_id);
@@ -97,7 +102,12 @@ for (const song of songs) {
   if (!exists(song.id, "audio", "128")) {
     const msg = await bot.api.sendAudio(
       STORAGE_CHAT_ID,
-      new InputFile(path.join(ROOT, song.link128!))
+      new InputFile(path.join(ROOT, song.link128!)),
+      {
+        title: song.title,
+        performer: song.artist,
+        duration: song.duration,
+      }
     );
 
     saveTx(
@@ -120,7 +130,12 @@ for (const song of songs) {
   if (!exists(song.id, "audio", "320")) {
     const msg = await bot.api.sendAudio(
       STORAGE_CHAT_ID,
-      new InputFile(path.join(ROOT, song.link320!))
+      new InputFile(path.join(ROOT, song.link320!)),
+      {
+        title: song.title,
+        performer: song.artist,
+        duration: song.duration,
+      }
     );
 
     saveTx(

@@ -5,7 +5,13 @@ export type Song = {
   titleEn?: string | null;
   artist: string;
   artistEn?: string | null;
-  artists: { id: string }[];
+  artists: {
+    id: string;
+    name: string;
+    nameEn: string;
+    fileId?: string;
+    uniqueFileId?: string;
+  }[];
   albumName?: string | null;
   coverArt: string;
   year: number;
@@ -65,4 +71,8 @@ export type Artist = {
   image?: string | null;
   createdAt: number;
   updatedAt: number;
+  telegram?: {
+    fileId: string;
+    fileUniqueId: string;
+  };
 };
