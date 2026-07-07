@@ -97,7 +97,7 @@ export function logger(): TelegramFile[] | null {
       `
 SELECT *
 FROM telegram_files
-WHERE songId = 'cmnizd6vf023wuigpy7h1hzmv'
+WHERE songId = 'cmniz748c000ruigp684hyrda'
 `
     )
     .all() as TelegramFile[] | null;

@@ -156,6 +156,7 @@ bot.command("start", async (ctx) => {
     }
 
     await sendSearchResults(ctx, query, 0, songs);
+    return;
   }
 
   if (ctx.match?.startsWith("a_")) {

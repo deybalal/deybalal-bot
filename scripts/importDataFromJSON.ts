@@ -1,7 +1,25 @@
 import { db } from "../src/db";
-import songs from "../data/songs.json";
+import songs from "../data/songs-source-of-truth.json";
+import type { ExportedSong } from "../types/types";
 
-type Song = (typeof songs)[number];
+const insertIntoTelegramFiles = db.prepare(`
+INSERT INTO telegram_files (
+    songId,
+    type,
+    quality,
+    fileId,
+    fileUniqueId,
+    uploadedAt
+)
+VALUES (?, ?, ?, ?, ?, unixepoch())
+
+ON CONFLICT(songId, type, quality)
+DO UPDATE SET
+
+fileId = excluded.fileId,
+fileUniqueId = excluded.fileUniqueId,
+uploadedAt = excluded.uploadedAt;
+`);
 
 const insert = db.prepare(`
 INSERT OR REPLACE INTO songs (
@@ -42,11 +60,11 @@ INSERT OR REPLACE INTO songs (
     updatedAt
 )
 VALUES (
-    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, unixepoch()
+    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, unixepoch()
 );
 `);
 
-const transaction = db.transaction((items: Song[]) => {
+const transaction = db.transaction((items: ExportedSong[]) => {
   for (const song of items) {
     if (!song.uri) {
       console.log(`Skipping song ${song.id} - no URI, `, song);
@@ -97,21 +115,62 @@ const transaction = db.transaction((items: Song[]) => {
 
       song.tempFilename,
 
-      song.links["64"]?.url ?? null,
-      song.links["64"]?.bytes ?? null,
+      song.links!["64"]?.url ?? null,
+      song.links!["64"]?.bytes ?? null,
 
-      song.links["128"]?.url ?? null,
-      song.links["128"]?.bytes ?? null,
+      song.links!["128"]?.url ?? null,
+      song.links!["128"]?.bytes ?? null,
 
-      song.links["320"]?.url ?? null,
-      song.links["320"]?.bytes ?? null
+      song.links!["320"]?.url ?? null,
+      song.links!["320"]?.bytes ?? null
+    );
+
+    if (song?.telegram && song?.telegram["320"]) {
+      insertIntoTelegramFiles.run(
+        song.id,
+        "audio",
+        "320",
+        song.telegram["320"].file_id,
+        song.telegram["320"].file_unique_id
+      );
+    }
+
+    insertIntoTelegramFiles.run(
+      song.id,
+      "audio",
+      "128",
+      song.telegram!["128"].file_id,
+      song.telegram!["128"].file_unique_id
+    );
+
+    insertIntoTelegramFiles.run(
+      song.id,
+      "audio",
+      "64",
+      song.telegram!["64"].file_id,
+      song.telegram!["64"].file_unique_id
+    );
+
+    insertIntoTelegramFiles.run(
+      song.id,
+      "photo",
+      "",
+      song.telegram!["coverArt"].file_id,
+      song.telegram!["coverArt"].file_unique_id
+    );
+    insertIntoTelegramFiles.run(
+      song.id,
+      "voice",
+      "",
+      song.telegram!["ogg"].file_id,
+      song.telegram!["ogg"].file_unique_id
     );
   }
 });
 
 console.log("Importing songs...");
 
-transaction(songs);
+transaction(songs as ExportedSong[]);
 
 const count = db.query("SELECT COUNT(*) AS count FROM songs").get() as {
   count: number;

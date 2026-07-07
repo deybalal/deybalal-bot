@@ -1,14 +1,16 @@
-import badfiles from "../data/badFiles.json";
+import badfiles from "../data/badFiles1.json";
 import { getSongs } from "../src/dbUtils";
 import { formatBytes } from "../tools/formatBytes";
 
 console.log(badfiles.length);
 
 // Create a Set of seen songIds and filter the array
-const uniqueSongs = badfiles.filter(
+let uniqueSongs = badfiles.filter(
   (song, index, self) =>
     index === self.findIndex((s) => s.songId === song.songId)
 );
+
+uniqueSongs = uniqueSongs.filter((file) => !file.isDone);
 
 console.log("UUUn len ", uniqueSongs.length);
 
