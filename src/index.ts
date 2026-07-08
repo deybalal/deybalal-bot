@@ -26,6 +26,15 @@ import { sendSearchResults } from "../tools/sendSearchResults";
 import { readFile, writeFile } from "fs/promises";
 import type { Song } from "../types/types";
 import path from "path";
+import {
+  startLyricVideo,
+  handlePhoto,
+  handleDoneButton,
+  handleRangeInput,
+  handleCancel,
+  executeRendering,
+} from "./lyricVideo/handler";
+import { getState, setState } from "./lyricVideo/state";
 
 const app = new Hono();
 
@@ -284,6 +293,39 @@ bot.command("start", async (ctx) => {
 \n✨ از اینکه از دی بلال استفاده میکنی، ممنونیم!`;
 
   await ctx.reply(text, { reply_markup: inline });
+});
+
+bot.callbackQuery(/^lv_res_(big|small)$/, async (ctx) => {
+  const userId = ctx.from.id;
+  const state = getState(userId);
+
+  if (!state || state.step !== "waiting_resolution") {
+    return ctx.answerCallbackQuery({
+      text: "درخواست منقضی شده است.",
+    });
+  }
+
+  const resolution = ctx.match[1] as "big" | "small";
+
+  state.resolution = resolution;
+  state.step = "rendering";
+  setState(userId, state);
+
+  await ctx.answerCallbackQuery();
+
+  await ctx.deleteMessage();
+
+  const progress = await ctx.reply(
+    `🎥 رزولوشن: ${resolution === "big" ? "🖥 بزرگ (PC)" : "📱 کوچک (Instagram)"}
+
+⏳ شروع پردازش...
+📥 درحال دریافت فایل صوتی...`
+  );
+
+  state.progressMessageId = progress.message_id;
+  setState(userId, state);
+
+  await executeRendering(ctx);
 });
 
 bot.command("find", async (ctx) => {
@@ -660,6 +702,24 @@ bot.callbackQuery(/^arand:(.+)$/, async (ctx) => {
   showSong(ctx, random);
 });
 
+bot.callbackQuery(/^lv:(.+)$/, async (ctx) => {
+  const songId = ctx.match[1];
+  if (!songId) {
+    await ctx.answerCallbackQuery("❌ خطا");
+    return;
+  }
+  await startLyricVideo(ctx, songId);
+});
+
+bot.callbackQuery(/^lv_done:(.+)$/, async (ctx) => {
+  const songId = ctx.match[1];
+  if (!songId) {
+    await ctx.answerCallbackQuery("❌ خطا");
+    return;
+  }
+  await handleDoneButton(ctx, songId);
+});
+
 bot.command("search", async (ctx) => {
   ensureUser(ctx.from!);
   const query = ctx.match?.trim();
@@ -871,10 +931,24 @@ bot.on("inline_query", async (ctx) => {
   // );
 });
 
+bot.command("cancel", async (ctx) => {
+  const handled = handleCancel(ctx);
+  if (handled) {
+    await ctx.reply("❌ عملیات لغو شد.");
+  }
+});
+
+bot.on("message:photo", async (ctx) => {
+  handlePhoto(ctx);
+});
+
 bot.on("message:text", async (ctx) => {
   const text = ctx.message.text.trim();
 
   if (text.startsWith("/")) return;
+
+  const rangeHandled = await handleRangeInput(ctx);
+  if (rangeHandled) return;
 
   ensureUser(ctx.from!);
 

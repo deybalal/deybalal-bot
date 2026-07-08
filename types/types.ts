@@ -145,3 +145,16 @@ export type ExportedSong = {
     };
   };
 };
+
+export type LyricVideoState = {
+  songId: string;
+  images: string[];
+  jobDir: string;
+  startMs?: number;
+  endMs?: number;
+  progressMessageId?: number;
+  step: "waiting_images" | "waiting_range" | "rendering" | "waiting_resolution";
+  resolution?: VideoResolution;
+};
+
+export type VideoResolution = "big" | "small";
