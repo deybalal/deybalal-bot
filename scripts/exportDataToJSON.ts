@@ -1,6 +1,7 @@
 import fs from "fs/promises";
 import path from "path";
 import { db } from "../src/db";
+import type { Song } from "../types/types";
 
 type TelegramEntry = {
   file_id: string;
@@ -20,7 +21,7 @@ function getTimestamp() {
 export async function exportSongsToJson(): Promise<string> {
   const songs = db
     .query(`SELECT * FROM songs ORDER BY songIndex ASC`)
-    .all() as any[];
+    .all() as Song[];
 
   const tgFiles = db.query(`SELECT * FROM telegram_files`).all() as any[];
 
@@ -51,7 +52,9 @@ export async function exportSongsToJson(): Promise<string> {
 
       artist: song.artist,
       artistEn: song.artistEn,
-      artists: song.artists ? JSON.parse(song.artists) : [],
+      artists: song.artists
+        ? JSON.parse(song.artists as unknown as string)
+        : [],
 
       albumName: song.albumName,
 
@@ -117,6 +120,12 @@ export async function exportSongsToJson(): Promise<string> {
         "128": tg?.get("128") ?? null,
         "320": tg?.get("320") ?? null,
         ogg: tg?.get("voice") ?? null,
+      },
+
+      post: {
+        has_posted: song.has_posted === 1 ? true : false,
+        message_id: song.message_id,
+        ogg_message_id: song.ogg_message_id,
       },
     };
   });

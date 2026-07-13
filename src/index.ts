@@ -1,43 +1,16 @@
-import { Bot, GrammyError, InlineKeyboard, InputFile } from "grammy";
+import { Bot, GrammyError } from "grammy";
 import type { InlineQueryResultCachedAudio } from "grammy/types";
 import "dotenv/config";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import {
-  addFavorite,
   ensureUser,
-  getFavoriteSongs,
-  getRandomSong,
-  getRandomSongByArtistId,
-  getSongById,
-  getSongs,
-  getSongsByArtistId,
-  getStats,
   getTelegramFile,
-  incrementSongDownloads,
-  incrementViewCount,
-  removeFavorite,
   searchSongs,
   getPreferredQuality,
-  setPreferredQuality,
-  getTopPlayedSongs,
-  getMostDownloadedSongs,
-  getAllAlbums,
-  getSongsByAlbumId,
 } from "./dbUtils";
-import { db } from "./db";
-import { showSong } from "../tools/showSong";
-import { getArtistById } from "../tools/getArtistName";
 import { sendSearchResults } from "../tools/sendSearchResults";
-import type { Song } from "../types/types";
-import path from "path";
-import {
-  handlePhoto,
-  handleRangeInput,
-  handleCancel,
-} from "./lyricVideo/handler";
-import { getState, setState } from "./lyricVideo/state";
-import { findInlineBrokenFiles } from "../scripts/junks/findInlineBrokenFiles";
+import { handlePhoto, handleRangeInput } from "./lyricVideo/handler";
 import { registerStartCommand } from "./commands/start";
 import { registerFindCommand } from "./commands/find";
 import { registerSearchCommand } from "./commands/search";
@@ -157,6 +130,13 @@ bot.on("inline_query", async (ctx) => {
       },
     });
   } catch (error) {
+    console.log("Query: ", ctx.inlineQuery.query.trim());
+    if ((error as Error).message.includes("AUDIO_TITLE_EMPTY")) {
+      await bot.api.sendMessage(
+        parseInt(process.env.LOGS_CHAT_ID!),
+        `Error: AUDIO_TITLE_EMPTY\n\n query: ${ctx.inlineQuery.query.trim()}`
+      );
+    }
     console.error("Inline query error:", (error as Error).message);
   }
 });

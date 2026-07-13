@@ -513,3 +513,47 @@ export function getSongsByAlbumId(id: string): TelegramSongWithFiles[] {
     },
   }));
 }
+
+export function updateSongWithPostDetails(
+  songId: string,
+  messageId: number,
+  oggMessageId: number,
+  mp3MessageId: number
+) {
+  db.query(
+    `
+    UPDATE songs
+    SET
+      has_posted = 1,
+      message_id = ?,
+      ogg_message_id = ?,
+      mp3_message_id = ?,
+      updatedAt = unixepoch()
+    WHERE id = ?
+    `
+  ).run(messageId, oggMessageId, mp3MessageId, songId);
+}
+
+export function getUnpostedSongs(): TelegramSongWithFiles[] {
+  const songs = db
+    .query(
+      `
+      SELECT *
+      FROM songs
+      WHERE has_posted = 0
+      ORDER BY songIndex ASC;
+      `
+    )
+    .all() as Song[];
+
+  return songs.map((song) => ({
+    ...song,
+    telegram: {
+      coverArt: getTelegramFile(song.id, "photo", ""),
+      ogg: getTelegramFile(song.id, "voice", ""),
+      "64": getTelegramFile(song.id, "audio", "64"),
+      "128": getTelegramFile(song.id, "audio", "128"),
+      "320": getTelegramFile(song.id, "audio", "320"),
+    },
+  }));
+}

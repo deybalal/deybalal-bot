@@ -78,6 +78,11 @@ CREATE TABLE IF NOT EXISTS songs (
     link320 TEXT,
     bytes320 INTEGER,
 
+    has_posted INTEGER NOT NULL DEFAULT 0,
+    message_id INTEGER,
+    ogg_message_id INTEGER,
+    mp3_message_id INTEGER
+
     createdAt INTEGER NOT NULL DEFAULT (unixepoch()),
     updatedAt INTEGER NOT NULL DEFAULT (unixepoch())
 );

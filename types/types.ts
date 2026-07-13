@@ -12,6 +12,9 @@ export type Song = {
     fileId?: string;
     uniqueFileId?: string;
   }[];
+  has_posted: number;
+  message_id?: number | null;
+  ogg_message_id?: number | null;
   albumName?: string | null;
   coverArt: string;
   year: number;
@@ -92,6 +95,11 @@ export type ExportedSong = {
     fileId?: string;
     uniqueFileId?: string;
   }[];
+  post: {
+    has_posted: boolean;
+    message_id?: number | null;
+    ogg_message_id?: number | null;
+  };
   albumName?: string | null;
   coverArt: string;
   year: number;

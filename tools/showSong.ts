@@ -2,7 +2,6 @@ import { InlineKeyboard, type Context } from "grammy";
 import type { TelegramSongWithFiles } from "../types/types";
 import { formatDuration } from "./formatDuration";
 import { formatBytes } from "./formatBytes";
-import { getArtistById } from "./getArtistName";
 import { isFavorite } from "../src/dbUtils";
 
 export async function showSong(
@@ -52,8 +51,11 @@ ${isSongInFavorites ? "✅ این آهنگ در لیست علاقه‌مندی�
       kb.text(`🎤 ${item.name || "خواننده"}`, `a:${item.id}:0`).row();
     }
   }
-  if (song.albumName) {
-    kb.text(`💿 ${song.albumName}`, `album:${encodeURIComponent(song.albumName)}:0`).row();
+  if (song.albumId) {
+    kb.text(
+      `💿 ${song.albumName}`,
+      `album:${encodeURIComponent(song.albumId)}:0`
+    ).row();
   }
   if (song.lyrics) {
     kb.text("🎵 متن آهنگ", `lyrics:${song.id}`).row();

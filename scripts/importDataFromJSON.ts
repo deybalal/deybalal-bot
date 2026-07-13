@@ -1,5 +1,5 @@
 import { db } from "../src/db";
-import songs from "../data/songs-source-of-truth.json";
+import songs from "../data/songs-export-2026-07-13_23-02-54.json";
 import type { ExportedSong } from "../types/types";
 
 const insertIntoTelegramFiles = db.prepare(`
@@ -57,10 +57,13 @@ INSERT OR REPLACE INTO songs (
     bytes128,
     link320,
     bytes320,
+    has_posted,
+    message_id,
+    ogg_message_id,
     updatedAt
 )
 VALUES (
-    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, unixepoch()
+    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, unixepoch()
 );
 `);
 
@@ -122,7 +125,10 @@ const transaction = db.transaction((items: ExportedSong[]) => {
       song.links!["128"]?.bytes ?? null,
 
       song.links!["320"]?.url ?? null,
-      song.links!["320"]?.bytes ?? null
+      song.links!["320"]?.bytes ?? null,
+      song.post.has_posted,
+      song.post.message_id,
+      song.post.ogg_message_id
     );
 
     if (song?.telegram && song?.telegram["320"]) {
