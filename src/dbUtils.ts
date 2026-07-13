@@ -391,3 +391,125 @@ export function getFavoriteSongs(userId: number): TelegramSongWithFiles[] {
     },
   }));
 }
+
+export function getPreferredQuality(userId: number): string {
+  const row = db
+    .prepare(
+      `
+    SELECT preferred_quality
+    FROM users
+    WHERE telegram_id = ?
+  `
+    )
+    .get(userId) as { preferred_quality: string } | undefined;
+
+  return row?.preferred_quality || "320";
+}
+
+export function setPreferredQuality(userId: number, quality: string): void {
+  db.prepare(
+    `
+    UPDATE users
+    SET preferred_quality = ?
+    WHERE telegram_id = ?
+  `
+  ).run(quality, userId);
+}
+
+export function getTopPlayedSongs(limit: number = 50): TelegramSongWithFiles[] {
+  const songs = db
+    .query(
+      `
+    SELECT *
+    FROM songs
+    WHERE isActive = 1 AND isDisabled = 0
+    ORDER BY playCount DESC
+    LIMIT ?
+  `
+    )
+    .all(limit) as Song[];
+
+  return songs.map((song) => ({
+    ...song,
+    telegram: {
+      coverArt: getTelegramFile(song.id, "photo", ""),
+      ogg: getTelegramFile(song.id, "voice", ""),
+      "64": getTelegramFile(song.id, "audio", "64"),
+      "128": getTelegramFile(song.id, "audio", "128"),
+      "320": getTelegramFile(song.id, "audio", "320"),
+    },
+  }));
+}
+
+export function getMostDownloadedSongs(
+  limit: number = 50
+): TelegramSongWithFiles[] {
+  const songs = db
+    .query(
+      `
+    SELECT *
+    FROM songs
+    WHERE isActive = 1 AND isDisabled = 0
+    ORDER BY downloads DESC
+    LIMIT ?
+  `
+    )
+    .all(limit) as Song[];
+
+  return songs.map((song) => ({
+    ...song,
+    telegram: {
+      coverArt: getTelegramFile(song.id, "photo", ""),
+      ogg: getTelegramFile(song.id, "voice", ""),
+      "64": getTelegramFile(song.id, "audio", "64"),
+      "128": getTelegramFile(song.id, "audio", "128"),
+      "320": getTelegramFile(song.id, "audio", "320"),
+    },
+  }));
+}
+
+export function getAllAlbums(): {
+  albumId?: string | null;
+  albumName: string;
+  songCount: number;
+}[] {
+  return db
+    .query(
+      `
+      SELECT albumId, albumName, COUNT(*) AS songCount
+      FROM songs
+      WHERE isActive = 1 AND isDisabled = 0 AND albumName IS NOT NULL AND albumName != ''
+      GROUP BY albumId, albumName
+      ORDER BY albumName ASC
+    `
+    )
+    .all() as {
+    albumId?: string | null;
+    albumName: string;
+    songCount: number;
+  }[];
+}
+
+export function getSongsByAlbumId(id: string): TelegramSongWithFiles[] {
+  const songs = db
+    .query(
+      `
+    SELECT *
+    FROM songs
+    WHERE albumId = ? AND isActive = 1 AND isDisabled = 0
+    ORDER BY songIndex ASC
+  `
+    )
+    .all(id) as Song[];
+
+  return songs.map((song) => ({
+    ...song,
+    telegram: {
+      coverArt: getTelegramFile(song.id, "photo", ""),
+      ogg: getTelegramFile(song.id, "voice", ""),
+      "64": getTelegramFile(song.id, "audio", "64"),
+      "128": getTelegramFile(song.id, "audio", "128"),
+      "320": getTelegramFile(song.id, "audio", "320"),
+    },
+  }));
+}

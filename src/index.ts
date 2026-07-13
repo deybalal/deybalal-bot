@@ -18,12 +18,17 @@ import {
   incrementViewCount,
   removeFavorite,
   searchSongs,
+  getPreferredQuality,
+  setPreferredQuality,
+  getTopPlayedSongs,
+  getMostDownloadedSongs,
+  getAllAlbums,
+  getSongsByAlbumId,
 } from "./dbUtils";
 import { db } from "./db";
 import { showSong } from "../tools/showSong";
 import { getArtistById } from "../tools/getArtistName";
 import { sendSearchResults } from "../tools/sendSearchResults";
-import { readFile, writeFile } from "fs/promises";
 import type { Song } from "../types/types";
 import path from "path";
 import {
@@ -35,6 +40,7 @@ import {
   executeRendering,
 } from "./lyricVideo/handler";
 import { getState, setState } from "./lyricVideo/state";
+import { findInlineBrokenFiles } from "../scripts/junks/findInlineBrokenFiles";
 
 const app = new Hono();
 
@@ -42,106 +48,6 @@ const bot = new Bot(process.env.BOT_TOKEN!);
 
 function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
-}
-
-async function sendAudioWithRetry(
-  chatId: number,
-  fileId: string,
-  maxRetries = 5
-) {
-  let attempt = 0;
-
-  while (true) {
-    try {
-      return await bot.api.sendAudio(chatId, fileId);
-    } catch (e) {
-      const isFlood =
-        e instanceof GrammyError &&
-        e.error_code === 429 &&
-        e.parameters?.retry_after != null;
-
-      if (!isFlood || attempt >= maxRetries) {
-        throw e; // real error (e.g. AUDIO_TITLE_EMPTY-adjacent, invalid file, etc.) — bubble up
-      }
-
-      const waitSec = e.parameters!.retry_after! + 2;
-      console.log(
-        `429 rate limited, waiting ${waitSec}s (attempt ${attempt + 1})`
-      );
-      await sleep(waitSec * 1000);
-      attempt++;
-      // loop retries the same fileId
-    }
-  }
-}
-
-async function findInlineBrokenFiles(allSongs: Song[]) {
-  interface BadFile {
-    songId: string;
-    quality: string;
-    fileId: string;
-    singer?: string | null;
-    dbTitle: string;
-    embeddedTitle: string | undefined;
-    embeddedPerformer: string | undefined;
-  }
-
-  const badFiles: BadFile[] = JSON.parse(
-    await readFile("./badFiles.json", "utf-8")
-  );
-
-  console.log("allSongs ", allSongs.length);
-
-  let reportedIndx = 0;
-
-  for (const song of allSongs) {
-    const qualities = [
-      { q: "320", file: getTelegramFile(song.id, "audio", "320") },
-      { q: "128", file: getTelegramFile(song.id, "audio", "128") },
-      { q: "64", file: getTelegramFile(song.id, "audio", "64") },
-    ];
-
-    for (const { q, file } of qualities) {
-      if (!file?.fileId) continue;
-
-      if (reportedIndx % 10 === 0) {
-        console.log("Reported", reportedIndx, "of", allSongs.length * 3);
-      }
-      reportedIndx++;
-
-      try {
-        // NOTE: no title/performer override here on purpose
-        const msg = await sendAudioWithRetry(-1003936127617, file.fileId);
-        const embeddedTitle = msg.audio?.title;
-        const embeddedPerformer = msg.audio?.performer;
-
-        await bot.api.deleteMessage(-1003936127617, msg.message_id);
-
-        if (!embeddedTitle) {
-          console.log("BROKEN FOR INLINE:", song.id, q);
-          badFiles.push({
-            songId: song.id,
-            quality: q,
-            fileId: file.fileId,
-            dbTitle: song.title,
-            singer: song.artistEn,
-            embeddedTitle,
-            embeddedPerformer,
-          });
-          await writeFile("./badFiles.json", JSON.stringify(badFiles, null, 2));
-        } else {
-          // console.log("OK:", song.id, q, "-", embeddedTitle);
-        }
-      } catch (e) {
-        console.log("ERROR sending:", song.id, q, (e as Error).message);
-      }
-
-      await new Promise((r) => setTimeout(r, 1200)); // stay under Telegram's per-chat rate limit
-    }
-  }
-
-  await writeFile("./badFiles.json", JSON.stringify(badFiles, null, 2));
-  console.log(`Done. ${badFiles.length} files missing embedded title.`);
 }
 
 // /start command
@@ -277,9 +183,13 @@ bot.command("start", async (ctx) => {
     .row()
     .text("⭐علاقه‌مندی ها", "favorites:0")
     .row()
-    .text("درباره", "about")
+    .text("📊 بیشترین بازدید", "top:0")
+    .text("🎵 بیشترین دانلود", "mostplayed:0")
     .row()
-    .text("تنظیمات", "settings");
+    .text("💿 آلبوم‌ها", "albums:0")
+    .row()
+    .text("ℹ️ درباره", "about")
+    .text("⚙️ تنظیمات", "settings");
 
   let text = `🎵 خش اومیی همتبار!
 
@@ -290,7 +200,7 @@ bot.command("start", async (ctx) => {
 
 می‌تونی با عنوان یا خواننده جستجو کنی، موزیک تصادفی ببینی و آهنگ‌ هارو با کیفیت‌های مختلف دانلود کنی.
 
-\n✨ از اینکه از دی بلال استفاده میکنی، ممنونیم!`;
+✨ از اینکه از دی بلال استفاده میکنی، ممنونیم!`;
 
   await ctx.reply(text, { reply_markup: inline });
 });
@@ -393,9 +303,13 @@ bot.callbackQuery("home", async (ctx) => {
     .row()
     .text("⭐علاقه‌مندی ها", "favorites:0")
     .row()
-    .text("درباره", "about")
+    .text("📊 بیشترین بازدید", "top:0")
+    .text("🎵 بیشترین دانلود", "mostplayed:0")
     .row()
-    .text("تنظیمات", "settings");
+    .text("💿 آلبوم‌ها", "albums:0")
+    .row()
+    .text("ℹ️ درباره", "about")
+    .text("⚙️ تنظیمات", "settings");
 
   let text = `🎵 خش اومیی همتبار!
 
@@ -406,7 +320,7 @@ bot.callbackQuery("home", async (ctx) => {
 
 می‌تونی با عنوان یا خواننده جستجو کنی، موزیک تصادفی ببینی و آهنگ‌ هارو با کیفیت‌های مختلف دانلود کنی.
 
-\n✨ از اینکه از دی بلال استفاده میکنی، ممنونیم!`;
+✨ از اینکه از دی بلال استفاده میکنی، ممنونیم!`;
 
   await ctx.editMessageReplyMarkup({
     reply_markup: inline,
@@ -829,24 +743,30 @@ bot.on("inline_query", async (ctx) => {
       return;
     }
 
+    const userId = ctx.from!.id;
+    const preferredQuality = getPreferredQuality(userId);
+
     const songs = searchSongs(query, 50);
 
     const validResults: InlineQueryResultCachedAudio[] = [];
 
     for (const song of songs.slice(0, 50)) {
-      const audio320 = getTelegramFile(song.id, "audio", "320");
+      const audioPreferred = getTelegramFile(
+        song.id,
+        "audio",
+        preferredQuality
+      );
       const audio128 = getTelegramFile(song.id, "audio", "128");
+      const audio320 = getTelegramFile(song.id, "audio", "320");
       const audio64 = getTelegramFile(song.id, "audio", "64");
 
-      const audioFile = audio320 || audio128 || audio64;
+      const audioFile = audioPreferred || audio128 || audio320 || audio64;
 
       if (!audioFile?.fileId) continue;
 
       if (!song.title) {
         console.log("song.title is empty", song);
       }
-
-      console.log("song.artists ", song.artists);
 
       const artists = JSON.parse(song.artists as unknown as string);
 
@@ -859,7 +779,7 @@ bot.on("inline_query", async (ctx) => {
             (s: { id: string; name: string }) =>
               `<a href="https://t.me/deybalalirbot?start=a_${s.id}">${s.name}</a>`
           )
-          .join(", ")}`,
+          .join(" و ")}`,
         parse_mode: "HTML",
       });
 
@@ -935,6 +855,602 @@ bot.command("cancel", async (ctx) => {
   const handled = handleCancel(ctx);
   if (handled) {
     await ctx.reply("❌ عملیات لغو شد.");
+  }
+});
+
+bot.callbackQuery("about", async (ctx) => {
+  const stats = getStats();
+
+  const text = `ℹ️ <b>درباره ربات</b>
+
+🎵 <b>ربات تلگرام دی بلال</b>
+
+🎧 ${stats.songs.toLocaleString()} آهنگ
+🎤 ${stats.artists.toLocaleString()} هنرمند
+
+✨ قابلیت‌ها:
+• جستجوی آهنگ با عنوان یا هنرمند
+• موزیک تصادفی
+• علاقه‌مندی‌ها
+• دانلود با کیفیت‌های مختلف (64, 128, 320 kbps)
+• پخش پیش‌نمایش
+• ساخت ویدیوی متن آهنگ
+• بیشترین بازدید و پربازدیدترین آهنگ‌ها
+• مرور آلبوم‌ها
+• نمایش متن آهنگ
+
+برنامه نویس: @isBuilding`;
+
+  await ctx.editMessageReplyMarkup({
+    reply_markup: {
+      inline_keyboard: [[{ text: "🔙 بازگشت", callback_data: "home" }]],
+    },
+  });
+
+  await ctx.reply(text, {
+    parse_mode: "HTML",
+    reply_markup: {
+      inline_keyboard: [[{ text: "🔙 بازگشت", callback_data: "home" }]],
+    },
+  });
+});
+
+bot.callbackQuery("settings", async (ctx) => {
+  const userId = ctx.from!.id;
+  const quality = getPreferredQuality(userId);
+
+  const qualityLabels: Record<string, string> = {
+    "320": "320 kbps ✓",
+    "128": "128 kbps ✓",
+    "64": "64 kbps ✓",
+  };
+
+  await ctx.editMessageReplyMarkup({
+    reply_markup: {
+      inline_keyboard: [
+        [
+          {
+            text: `🎧 ${qualityLabels[quality]}`,
+            callback_data: "settings_quality",
+          },
+        ],
+        [{ text: "🔙 بازگشت", callback_data: "home" }],
+      ],
+    },
+  });
+});
+
+bot.callbackQuery("settings_quality", async (ctx) => {
+  const userId = ctx.from!.id;
+  const quality = getPreferredQuality(userId);
+
+  const qualityLabels: Record<string, string> = {
+    "320": "320 kbps ✓",
+    "128": "128 kbps ✓",
+    "64": "64 kbps ✓",
+  };
+
+  await ctx.editMessageReplyMarkup({
+    reply_markup: {
+      inline_keyboard: [
+        [
+          {
+            text: quality === "320" ? "320 kbps ✓" : "320 kbps",
+            callback_data: "quality:320",
+          },
+        ],
+        [
+          {
+            text: quality === "128" ? "128 kbps ✓" : "128 kbps",
+            callback_data: "quality:128",
+          },
+        ],
+        [
+          {
+            text: quality === "64" ? "64 kbps ✓" : "64 kbps",
+            callback_data: "quality:64",
+          },
+        ],
+        [{ text: "🔙 بازگشت", callback_data: "settings" }],
+      ],
+    },
+  });
+});
+
+bot.callbackQuery(/^quality:(320|128|64)$/, async (ctx) => {
+  const quality = ctx.match[1];
+  const userId = ctx.from!.id;
+
+  setPreferredQuality(userId, quality!);
+
+  await ctx.answerCallbackQuery({
+    text: `✅ کیفیت پیش‌فرض روی ${
+      quality === "320" ? "320" : quality === "128" ? "128" : "64"
+    } kbps تنظیم شد.`,
+    show_alert: true,
+  });
+
+  const newQuality = getPreferredQuality(userId);
+
+  const qualityLabels: Record<string, string> = {
+    "320": "320 kbps ✓",
+    "128": "128 kbps ✓",
+    "64": "64 kbps ✓",
+  };
+
+  await ctx.editMessageReplyMarkup({
+    reply_markup: {
+      inline_keyboard: [
+        [
+          {
+            text: newQuality === "320" ? "320 kbps ✓" : "320 kbps",
+            callback_data: "quality:320",
+          },
+        ],
+        [
+          {
+            text: newQuality === "128" ? "128 kbps ✓" : "128 kbps",
+            callback_data: "quality:128",
+          },
+        ],
+        [
+          {
+            text: newQuality === "64" ? "64 kbps ✓" : "64 kbps",
+            callback_data: "quality:64",
+          },
+        ],
+        [{ text: "🔙 بازگشت", callback_data: "settings" }],
+      ],
+    },
+  });
+});
+
+bot.callbackQuery(/^top:(\d+)$/, async (ctx) => {
+  await ctx.answerCallbackQuery();
+
+  const page = parseInt(ctx.match[1] || "0");
+  const PAGE_SIZE = 20;
+  const start = page * PAGE_SIZE;
+  const end = start + PAGE_SIZE;
+
+  const songs = getTopPlayedSongs(50);
+
+  if (!songs.length) {
+    await ctx.answerCallbackQuery("آهنگی پیدا نشد!");
+    return;
+  }
+
+  const pageSongs = songs.slice(start, end);
+
+  const buttons = pageSongs.map((song) => [
+    {
+      text: `🎵 ${song.title} — ${
+        song.artist
+      } [${song.playCount.toLocaleString()} بازدید]`,
+      callback_data: `s:${song.id}`,
+    },
+  ]);
+
+  const navButtons = [];
+
+  if (page > 0) {
+    navButtons.push({
+      text: "⬅️ قبلی",
+      callback_data: `top:${page - 1}`,
+    });
+  }
+
+  const hasNext = end < songs.length;
+
+  if (hasNext) {
+    navButtons.push({
+      text: "بعدی ➡️",
+      callback_data: `top:${page + 1}`,
+    });
+  }
+
+  await ctx.editMessageReplyMarkup({
+    reply_markup: {
+      inline_keyboard: [
+        [
+          {
+            text: `📊 بیشترین بازدید آهنگ‌ها [صفحه ${page + 1}]`,
+            callback_data: "no_callback",
+          },
+        ],
+        ...buttons,
+        navButtons.length ? navButtons : [],
+        [{ text: "🔙 بازگشت", callback_data: "home" }],
+      ],
+    },
+  });
+});
+
+bot.command("top", async (ctx) => {
+  ensureUser(ctx.from!);
+
+  const songs = getTopPlayedSongs(50);
+
+  if (!songs.length) {
+    await ctx.reply("آهنگی پیدا نشد!");
+    return;
+  }
+
+  const page = 0;
+  const PAGE_SIZE = 20;
+  const start = page * PAGE_SIZE;
+  const end = start + PAGE_SIZE;
+
+  const pageSongs = songs.slice(start, end);
+
+  const buttons = pageSongs.map((song) => [
+    {
+      text: `🎵 ${song.title} — ${
+        song.artist
+      } [${song.playCount.toLocaleString()} بازدید]`,
+      callback_data: `s:${song.id}`,
+    },
+  ]);
+
+  const navButtons = [];
+
+  const hasNext = end < songs.length;
+
+  if (hasNext) {
+    navButtons.push({
+      text: "بعدی ➡️",
+      callback_data: `top:${page + 1}`,
+    });
+  }
+
+  await ctx.reply(`📊 بیشترین بازدید آهنگ‌ها`, {
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: `صفحه ${page + 1}`, callback_data: "no_callback" }],
+        ...buttons,
+        navButtons.length ? navButtons : [],
+        [{ text: "🔙 بازگشت", callback_data: "home" }],
+      ],
+    },
+  });
+});
+
+bot.callbackQuery(/^mostplayed:(\d+)$/, async (ctx) => {
+  await ctx.answerCallbackQuery();
+
+  const page = parseInt(ctx.match[1] || "0");
+  const PAGE_SIZE = 20;
+  const start = page * PAGE_SIZE;
+  const end = start + PAGE_SIZE;
+
+  const songs = getMostDownloadedSongs(50);
+
+  if (!songs.length) {
+    await ctx.answerCallbackQuery("آهنگی پیدا نشد!");
+    return;
+  }
+
+  const pageSongs = songs.slice(start, end);
+
+  const buttons = pageSongs.map((song) => [
+    {
+      text: `🎵 ${song.title} — ${
+        song.artist
+      } [${song.downloads.toLocaleString()} دانلود]`,
+      callback_data: `s:${song.id}`,
+    },
+  ]);
+
+  const navButtons = [];
+
+  if (page > 0) {
+    navButtons.push({
+      text: "⬅️ قبلی",
+      callback_data: `mostplayed:${page - 1}`,
+    });
+  }
+
+  const hasNext = end < songs.length;
+
+  if (hasNext) {
+    navButtons.push({
+      text: "بعدی ➡️",
+      callback_data: `mostplayed:${page + 1}`,
+    });
+  }
+
+  await ctx.editMessageReplyMarkup({
+    reply_markup: {
+      inline_keyboard: [
+        [
+          {
+            text: `🎵 بیشترین دانلود [صفحه ${page + 1}]`,
+            callback_data: "no_callback",
+          },
+        ],
+        ...buttons,
+        navButtons.length ? navButtons : [],
+        [{ text: "🔙 بازگشت", callback_data: "home" }],
+      ],
+    },
+  });
+});
+
+bot.command("mostplayed", async (ctx) => {
+  ensureUser(ctx.from!);
+
+  const songs = getMostDownloadedSongs(50);
+
+  if (!songs.length) {
+    await ctx.reply("آهنگی پیدا نشد!");
+    return;
+  }
+
+  const page = 0;
+  const PAGE_SIZE = 20;
+  const start = page * PAGE_SIZE;
+  const end = start + PAGE_SIZE;
+
+  const pageSongs = songs.slice(start, end);
+
+  const buttons = pageSongs.map((song) => [
+    {
+      text: `🎵 ${song.title} — ${
+        song.artist
+      } [${song.downloads.toLocaleString()} دانلود]`,
+      callback_data: `s:${song.id}`,
+    },
+  ]);
+
+  const navButtons = [];
+
+  const hasNext = end < songs.length;
+
+  if (hasNext) {
+    navButtons.push({
+      text: "بعدی ➡️",
+      callback_data: `mostplayed:${page + 1}`,
+    });
+  }
+
+  await ctx.reply(`🎵 بیشترین دانلود`, {
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: `صفحه ${page + 1}`, callback_data: "no_callback" }],
+        ...buttons,
+        navButtons.length ? navButtons : [],
+        [{ text: "🔙 بازگشت", callback_data: "home" }],
+      ],
+    },
+  });
+});
+
+bot.callbackQuery(/^albums:(\d+)$/, async (ctx) => {
+  await ctx.answerCallbackQuery();
+
+  const page = parseInt(ctx.match[1] || "0");
+  const PAGE_SIZE = 20;
+  const start = page * PAGE_SIZE;
+  const end = start + PAGE_SIZE;
+
+  const albums = getAllAlbums();
+
+  if (!albums.length) {
+    await ctx.answerCallbackQuery("آلبومی پیدا نشد!");
+    return;
+  }
+
+  const pageAlbums = albums.slice(start, end);
+
+  const buttons = pageAlbums.map((album) => [
+    {
+      text: `💿 ${album.albumName} [${album.songCount} آهنگ]`,
+      callback_data: `album:${encodeURIComponent(album.albumId || "")}:0`,
+    },
+  ]);
+
+  const navButtons = [];
+
+  if (page > 0) {
+    navButtons.push({
+      text: "⬅️ قبلی",
+      callback_data: `albums:${page - 1}`,
+    });
+  }
+
+  const hasNext = end < albums.length;
+
+  if (hasNext) {
+    navButtons.push({
+      text: "بعدی ➡️",
+      callback_data: `albums:${page + 1}`,
+    });
+  }
+
+  await ctx.editMessageReplyMarkup({
+    reply_markup: {
+      inline_keyboard: [
+        [
+          {
+            text: `💿 آلبوم‌ها [صفحه ${page + 1}]`,
+            callback_data: "no_callback",
+          },
+        ],
+        ...buttons,
+        navButtons.length ? navButtons : [],
+        [{ text: "🔙 بازگشت", callback_data: "home" }],
+      ],
+    },
+  });
+});
+
+bot.command("albums", async (ctx) => {
+  ensureUser(ctx.from!);
+
+  const albums = getAllAlbums();
+
+  if (!albums.length) {
+    await ctx.reply("آلبومی پیدا نشد!");
+    return;
+  }
+
+  const page = 0;
+  const PAGE_SIZE = 20;
+  const start = page * PAGE_SIZE;
+  const end = start + PAGE_SIZE;
+
+  const pageAlbums = albums.slice(start, end);
+
+  const buttons = pageAlbums.map((album) => [
+    {
+      text: `💿 ${album.albumName} [${album.songCount} آهنگ]`,
+      callback_data: `album:${encodeURIComponent(album.albumId || "")}:0`,
+    },
+  ]);
+
+  const navButtons = [];
+
+  const hasNext = end < albums.length;
+
+  if (hasNext) {
+    navButtons.push({
+      text: "بعدی ➡️",
+      callback_data: `albums:${page + 1}`,
+    });
+  }
+
+  await ctx.reply(`💿 آلبوم‌ها`, {
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: `صفحه ${page + 1}`, callback_data: "no_callback" }],
+        ...buttons,
+        navButtons.length ? navButtons : [],
+        [{ text: "🔙 بازگشت", callback_data: "home" }],
+      ],
+    },
+  });
+});
+
+bot.callbackQuery(/^album:([^:]+):(\d+)$/, async (ctx) => {
+  await ctx.answerCallbackQuery();
+
+  const albumId = decodeURIComponent(ctx.match[1]!);
+  const page = parseInt(ctx.match[2] || "0");
+  const PAGE_SIZE = 20;
+  const start = page * PAGE_SIZE;
+  const end = start + PAGE_SIZE;
+
+  let songs = getSongsByAlbumId(albumId);
+
+  if (!songs.length) {
+    await ctx.answerCallbackQuery("آهنگی پیدا نشد!");
+    return;
+  }
+
+  const pageSongs = songs.slice(start, end);
+
+  const buttons = pageSongs.map((song) => [
+    {
+      text: `🎵 ${song.title} — ${song.artist}`,
+      callback_data: `s:${song.id}`,
+    },
+  ]);
+
+  const navButtons = [];
+
+  if (page > 0) {
+    navButtons.push({
+      text: "⬅️ قبلی",
+      callback_data: `album:${encodeURIComponent(albumId)}:${page - 1}`,
+    });
+  }
+
+  const hasNext = end < songs.length;
+
+  if (hasNext) {
+    navButtons.push({
+      text: "بعدی ➡️",
+      callback_data: `album:${encodeURIComponent(albumId)}:${page + 1}`,
+    });
+  }
+
+  const totalAlbums = getAllAlbums();
+  const currentAlbumIndex = totalAlbums.findIndex((a) => a.albumId === albumId);
+
+  await ctx.editMessageReplyMarkup({
+    reply_markup: {
+      inline_keyboard: [
+        [
+          {
+            text: `💿 ${totalAlbums[currentAlbumIndex]?.albumName} [صفحه ${
+              page + 1
+            }]`,
+            callback_data: "no_callback",
+          },
+        ],
+        ...buttons,
+        navButtons.length ? navButtons : [],
+        [{ text: "🔙 بازگشت به آلبوم‌ها", callback_data: `albums:0` }],
+        [{ text: "🏠 خانه", callback_data: "home" }],
+      ],
+    },
+  });
+});
+
+bot.callbackQuery(/^lyrics:(.+)$/, async (ctx) => {
+  const songId = ctx.match[1];
+  const song = getSongById(songId!);
+
+  if (!song || !song.lyrics) {
+    await ctx.answerCallbackQuery("❌ متن آهنگی برای این آهنگ پیدا نشد.");
+    return;
+  }
+
+  await ctx.answerCallbackQuery();
+
+  const lyrics = song.lyrics || "";
+  const MESSAGE_LIMIT = 4096;
+
+  if (lyrics.length <= MESSAGE_LIMIT) {
+    await ctx.replyWithPhoto(song.telegram.coverArt?.fileId || "", {
+      caption: `🎵 <a href="https://t.me/deybalalirbot?start=s_${song.id}"><b>${song.title}</b></a> از  <a href="https://t.me/deybalalirbot?start=a_${song.artists[0]?.id}"><b>${song.artist}</b></a>\n\n<i>${lyrics}</i>`,
+      parse_mode: "HTML",
+    });
+    return;
+  }
+
+  const chunks: string[] = [];
+  let currentChunk = "";
+
+  for (const line of lyrics.split("\n")) {
+    if ((currentChunk + line + "\n").length > MESSAGE_LIMIT) {
+      chunks.push(currentChunk);
+      currentChunk = line + "\n";
+    } else {
+      currentChunk += line + "\n";
+    }
+  }
+
+  if (currentChunk) {
+    chunks.push(currentChunk);
+  }
+
+  for (let i = 0; i < chunks.length; i++) {
+    const chunk = chunks[i]!;
+    const isLast = i === chunks.length - 1;
+
+    if (i === 0) {
+      await ctx.replyWithPhoto(song.telegram.coverArt?.fileId || "", {
+        caption: `🎵 <b>${song.title}</b>\n\nصفحه ${i + 1}/${
+          chunks.length
+        }\n\n<i>${chunk}</i>`,
+        parse_mode: "HTML",
+      });
+    } else {
+      await ctx.reply(`<i>${chunk}</i>\n\nصفحه ${i + 1}/${chunks.length}`, {
+        parse_mode: "HTML",
+      });
+    }
   }
 });
 

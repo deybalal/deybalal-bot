@@ -137,5 +137,6 @@ db.exec(`CREATE TABLE IF NOT EXISTS users (
     is_bot INTEGER DEFAULT 0,
 
     started_at INTEGER NOT NULL,
-    updated_at INTEGER NOT NULL
+    updated_at INTEGER NOT NULL,
+    preferred_quality TEXT NOT NULL DEFAULT '320'
 );`);
