@@ -1,6 +1,12 @@
 import { Bot, InlineKeyboard } from "grammy";
-import { getSongById, incrementViewCount, incrementSongDownloads, searchSongs } from "../dbUtils";
+import {
+  getSongById,
+  incrementViewCount,
+  incrementSongDownloads,
+  searchSongs,
+} from "../dbUtils";
 import { showSong } from "../../tools/showSong";
+import { hashtagify } from "../../tools/hashtagify";
 
 export function registerSongCallbacks(bot: Bot) {
   bot.callbackQuery(/^s:(.+)$/, async (ctx) => {
@@ -60,22 +66,53 @@ export function registerSongCallbacks(bot: Bot) {
 
   bot.callbackQuery(/^sh:(.+)$/, async (ctx) => {
     const songId = ctx.match[1];
+
+    await ctx.answerCallbackQuery();
+
+    const song = getSongById(songId!);
+
+    if (!song) {
+      return ctx.reply("❌ آهنگ پیدا نشد.");
+    }
+
     const botUsername = ctx.me.username;
 
     const deepLink = `https://t.me/${botUsername}?start=s_${songId}`;
 
-    const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(deepLink)}`;
+    const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(
+      deepLink
+    )}`;
 
-    const inline = new InlineKeyboard().url("📤 اشتراک‌گذاری آهنگ", shareUrl);
+    const keyboard = new InlineKeyboard().url("📤 اشتراک‌گذاری آهنگ", shareUrl);
 
-    await ctx.answerCallbackQuery();
+    const caption = [
+      `🎵 <b>${song.title}</b>`,
+      `👤 ${song.artist}`,
+      song.albumName ? `💿 ${song.albumName}` : null,
+      song.year ? `📅 ${song.year}` : null,
+      " ",
+      `${hashtagify(song.artist)}`,
+      `${hashtagify(song.title)}`,
+      " ",
+      " ",
+      `🎧 گوش دادن به آهنگ:`,
+      deepLink,
+    ]
+      .filter(Boolean)
+      .join("\n");
 
-    await ctx.reply(
-      `🔗 لینک اشتراک‌گذاری این آهنگ:\n\n${deepLink}\n\nبرای اشتراک‌گذاری این آهنگ، دکمه زیر را انتخاب کنید:`,
-      {
-        reply_markup: inline,
-      }
-    );
+    if (song.telegram.coverArt?.fileId) {
+      await ctx.replyWithPhoto(song.telegram.coverArt.fileId, {
+        caption,
+        parse_mode: "HTML",
+        reply_markup: keyboard,
+      });
+    } else {
+      await ctx.reply(caption, {
+        parse_mode: "HTML",
+        reply_markup: keyboard,
+      });
+    }
   });
 
   bot.callbackQuery(/^lyrics:(.+)$/, async (ctx) => {
