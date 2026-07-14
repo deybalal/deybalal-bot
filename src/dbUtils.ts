@@ -1,5 +1,10 @@
 import { db } from "./db";
-import type { Song, TelegramFile, TelegramSongWithFiles } from "../types/types";
+import type {
+  Artist,
+  Song,
+  TelegramFile,
+  TelegramSongWithFiles,
+} from "../types/types";
 import type { User } from "grammy/types";
 
 export function ensureUser(user: User): boolean {
@@ -556,4 +561,60 @@ export function getUnpostedSongs(): TelegramSongWithFiles[] {
       "320": getTelegramFile(song.id, "audio", "320"),
     },
   }));
+}
+
+export function addArtist(artist: Artist) {
+  const addArtistStmt = db.prepare(`
+INSERT OR REPLACE INTO artists (
+    id,
+    name,
+    nameEn,
+    image,
+    isVerified,
+    ig,
+    description,
+    followers,
+    telegramFileId,
+    telegramFileUniqueId
+)
+VALUES (
+    @id,
+    @name,
+    @nameEn,
+    @image,
+    @isVerified,
+    @ig,
+    @description,
+    @followers,
+    @telegramFileId,
+    @telegramFileUniqueId
+);
+`);
+
+  addArtistStmt.run({
+    id: artist.id,
+    name: artist.name,
+    nameEn: artist.nameEn ?? null,
+    image: artist.image ?? null,
+    isVerified: artist.isVerified ? 1 : 0,
+    ig: artist.ig ?? null,
+    description: artist.description ?? null,
+    followers: artist.followers,
+    telegramFileId: artist.telegram?.fileId ?? null,
+    telegramFileUniqueId: artist.telegram?.fileUniqueId ?? null,
+  });
+}
+
+export function getArtistById(id: string): Artist | null {
+  const artist = db
+    .query(
+      `
+    SELECT *
+    FROM artists
+    WHERE id = ?
+  `
+    )
+    .get(id) as Artist | null;
+
+  return artist;
 }

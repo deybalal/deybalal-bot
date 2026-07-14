@@ -65,21 +65,6 @@ export type TelegramSongWithFiles = Song & {
   };
 };
 
-export type Artist = {
-  id: string;
-  name: string;
-  nameEn?: string | null;
-  slug: string;
-  description?: string | null;
-  image?: string | null;
-  createdAt: number;
-  updatedAt: number;
-  telegram?: {
-    fileId: string;
-    fileUniqueId: string;
-  };
-};
-
 export type ExportedSong = {
   links: any;
   id: string;
@@ -166,3 +151,24 @@ export type LyricVideoState = {
 };
 
 export type VideoResolution = "big" | "small";
+
+export interface Artist {
+  id: string;
+
+  name: string;
+  nameEn?: string;
+
+  image?: string;
+
+  isVerified: boolean;
+
+  ig?: string;
+  description?: string;
+
+  followers: number;
+
+  telegram?: {
+    fileId: string;
+    fileUniqueId: string;
+  };
+}

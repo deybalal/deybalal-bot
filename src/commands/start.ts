@@ -1,13 +1,13 @@
 import { Bot, InlineKeyboard } from "grammy";
 import {
   ensureUser,
+  getArtistById,
   getSongById,
   getSongsByArtistId,
   getStats,
   searchSongs,
 } from "../dbUtils";
 import { sendSearchResults } from "../../tools/sendSearchResults";
-import { getArtistById } from "../../tools/getArtistName";
 import { showSong } from "../../tools/showSong";
 
 export function registerStartCommand(bot: Bot) {
@@ -44,7 +44,7 @@ export function registerStartCommand(bot: Bot) {
         await ctx.reply("آهنگی برای این هنرمند پیدا نشد!");
         return;
       }
-      const artist = await getArtistById(artistId);
+      const artist = getArtistById(artistId);
       const artistName = artist?.name || "هنرمند"; // fallback if needed
 
       const artistNameEn = artist?.nameEn || "artist";

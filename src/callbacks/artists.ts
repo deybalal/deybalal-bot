@@ -1,6 +1,9 @@
 import { Bot } from "grammy";
-import { getSongsByArtistId, getRandomSongByArtistId } from "../dbUtils";
-import { getArtistById } from "../../tools/getArtistName";
+import {
+  getSongsByArtistId,
+  getRandomSongByArtistId,
+  getArtistById,
+} from "../dbUtils";
 import { showSong } from "../../tools/showSong";
 
 export function registerArtistCallbacks(bot: Bot) {
@@ -24,7 +27,7 @@ export function registerArtistCallbacks(bot: Bot) {
       }
 
       console.log("songs ", songs.length);
-      const artist = await getArtistById(artistId);
+      const artist = getArtistById(artistId);
       const artistName = artist?.name || "هنرمند";
       const artistNameEn = artist?.nameEn || "artist";
 

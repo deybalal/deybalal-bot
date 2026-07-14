@@ -145,3 +145,26 @@ db.exec(`CREATE TABLE IF NOT EXISTS users (
     updated_at INTEGER NOT NULL,
     preferred_quality TEXT NOT NULL DEFAULT '320'
 );`);
+
+db.exec(`
+CREATE TABLE IF NOT EXISTS artists (
+    id TEXT PRIMARY KEY,
+
+    name TEXT NOT NULL,
+    nameEn TEXT,
+
+    image TEXT,
+
+    isVerified INTEGER NOT NULL DEFAULT 0,
+
+    ig TEXT,
+    description TEXT,
+
+    followers INTEGER NOT NULL DEFAULT 0,
+
+    telegramFileId TEXT,
+    telegramFileUniqueId TEXT,
+
+    createdAt INTEGER NOT NULL DEFAULT (unixepoch())
+);
+`);
