@@ -172,3 +172,15 @@ export interface Artist {
     fileUniqueId: string;
   };
 }
+
+export interface VideoJob {
+  userId: number;
+  chatId: number;
+
+  songId: string;
+
+  title: string;
+
+  resolve: () => void;
+  reject: (err: Error) => void;
+}

@@ -34,7 +34,7 @@ import { verifyGithubSignature } from "../tools/verifyGithubSignature";
 
 const app = new Hono();
 
-const bot = new Bot(process.env.BOT_TOKEN!);
+export const bot = new Bot(process.env.BOT_TOKEN!);
 
 function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));

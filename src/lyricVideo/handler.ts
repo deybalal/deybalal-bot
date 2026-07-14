@@ -14,6 +14,8 @@ import {
 import { generateASSFile } from "./assGenerator";
 import { getSongById } from "../dbUtils";
 import type { LyricVideoState } from "../../types/types";
+import { removeFromQueue, isQueued } from "./queue/videoQueue";
+import bot from "..";
 
 const mediaGroupBuffers = new Map<
   string,
@@ -26,13 +28,13 @@ const mediaGroupBuffers = new Map<
 const MEDIA_GROUP_DEBOUNCE_MS = 2000;
 
 async function updateProgress(
-  ctx: Context,
+  chatId: number,
   messageId: number | undefined,
   text: string
 ): Promise<void> {
   if (!messageId) return;
   try {
-    await ctx.api.editMessageText(ctx.chat!.id, messageId, text);
+    await bot.api.editMessageText(chatId, messageId, text);
   } catch (e) {
     // Message may have been deleted or is unchanged
     console.log("Error inn update Progerss: ", (e as Error).message);
@@ -331,8 +333,10 @@ export async function handleRangeInput(ctx: Context): Promise<boolean> {
   }
 }
 
-export async function executeRendering(ctx: Context): Promise<void> {
-  const userId = ctx.from!.id;
+export async function executeRendering(
+  chatId: number,
+  userId: number
+): Promise<void> {
   const state = getState(userId);
 
   if (!state || state.step !== "rendering") return;
@@ -355,17 +359,17 @@ export async function executeRendering(ctx: Context): Promise<void> {
     }
 
     const rawAudioPath = path.join(jobDir, "raw_audio.mp3");
-    await downloadTelegramFile(ctx.api, audioFile.fileId, rawAudioPath);
+    await downloadTelegramFile(bot.api, audioFile.fileId, rawAudioPath);
 
     await updateProgress(
-      ctx,
+      chatId,
       state.progressMessageId,
       "✂️ درحال برش فایل صوتی..."
     );
     await cropAudio(rawAudioPath, audioPath, state.startMs!, state.endMs!);
 
     await updateProgress(
-      ctx,
+      chatId,
       state.progressMessageId,
       "🎞 درحال ساخت اسلایدشو..."
     );
@@ -380,7 +384,11 @@ export async function executeRendering(ctx: Context): Promise<void> {
 
     let assPath: string | null = null;
     if (song.syncedLyrics) {
-      await updateProgress(ctx, state.progressMessageId, "📝 تولید زیرنویس...");
+      await updateProgress(
+        chatId,
+        state.progressMessageId,
+        "📝 تولید زیرنویس..."
+      );
       assPath = await generateASSFile(
         song.syncedLyrics,
         jobDir,
@@ -389,7 +397,7 @@ export async function executeRendering(ctx: Context): Promise<void> {
       );
     }
 
-    await updateProgress(ctx, state.progressMessageId, "🎬 تولید ویدیو...");
+    await updateProgress(chatId, state.progressMessageId, "🎬 تولید ویدیو...");
     await renderFinal(
       slideshowPath,
       audioPath,
@@ -398,13 +406,13 @@ export async function executeRendering(ctx: Context): Promise<void> {
       state.resolution!
     );
 
-    await updateProgress(ctx, state.progressMessageId, "📤 ارسال ویدیو...");
+    await updateProgress(chatId, state.progressMessageId, "📤 ارسال ویدیو...");
 
     const thumbPath = path.join(jobDir, "thumb.jpg");
 
     await generateThumbnail(outputPath, thumbPath);
 
-    await ctx.replyWithVideo(new InputFile(outputPath), {
+    await bot.api.sendVideo(chatId, new InputFile(outputPath), {
       caption: `🎬 ${song.title} — ${song.artist}\n⏱ ${formatMs(
         state.startMs!
       )} - ${formatMs(state.endMs!)}`,
@@ -417,9 +425,9 @@ export async function executeRendering(ctx: Context): Promise<void> {
     clearState(userId);
 
     if (state.progressMessageId) {
-      await ctx.api
+      await bot.api
         .editMessageText(
-          ctx.chat!.id,
+          chatId,
           state.progressMessageId,
           "✅ ویدیو با موفقیت ساخته و ارسال شد!"
         )
@@ -432,12 +440,12 @@ export async function executeRendering(ctx: Context): Promise<void> {
     await cleanupJobDir(jobDir);
 
     const errorMsg = (err as Error).message || "خطای ناشناخته";
-    await ctx.reply(`❌ خطا در ساخت ویدیو: ${errorMsg}`);
+    await bot.api.sendMessage(chatId, `❌ خطا در ساخت ویدیو: ${errorMsg}`);
 
     if (state.progressMessageId) {
-      await ctx.api
+      await bot.api
         .editMessageText(
-          ctx.chat!.id,
+          chatId,
           state.progressMessageId,
           `❌ خطا در ساخت ویدیو: ${errorMsg}`
         )
@@ -451,6 +459,10 @@ export function handleCancel(ctx: Context): boolean {
   const state = getState(userId);
 
   if (!state) return false;
+
+  if (isQueued(userId)) {
+    removeFromQueue(userId);
+  }
 
   clearState(userId);
   cleanupJobDir(state.jobDir);

@@ -1,6 +1,8 @@
 import { Bot } from "grammy";
 import { getState, setState } from "../lyricVideo/state";
-import { executeRendering, handleDoneButton } from "../lyricVideo/handler";
+import { handleDoneButton } from "../lyricVideo/handler";
+import { enqueue, getQueueLength } from "../lyricVideo/queue/videoQueue";
+import { getSongById } from "../dbUtils";
 
 export function registerLyricVideoCallbacks(bot: Bot) {
   bot.callbackQuery(/^lv_res_(big|small)$/, async (ctx) => {
@@ -20,20 +22,34 @@ export function registerLyricVideoCallbacks(bot: Bot) {
     setState(userId, state);
 
     await ctx.answerCallbackQuery();
-
     await ctx.deleteMessage();
 
-    const progress = await ctx.reply(
-      `🎥 رزولوشن: ${resolution === "big" ? "🖥 بزرگ (PC)" : "📱 کوچک (Instagram)"}
+    const song = getSongById(state.songId);
+    const position = await enqueue({
+      userId,
+      chatId: ctx.chat!.id,
+      songId: state.songId,
+      title: song?.title || "",
+      resolve: () => {},
+      reject: () => {},
+    });
 
-⏳ شروع پردازش...
-📥 درحال دریافت فایل صوتی...`
-    );
+    const resolutionLabel = resolution === "big" ? "🖥 بزرگ (PC)" : "📱 کوچک (Instagram)";
 
-    state.progressMessageId = progress.message_id;
-    setState(userId, state);
-
-    await executeRendering(ctx);
+    if (position === 1) {
+      const progress = await ctx.reply(
+        `🎥 رزولوشن: ${resolutionLabel}\n\n⏳ شروع پردازش...\n📥 درحال دریافت فایل صوتی...`
+      );
+      state.progressMessageId = progress.message_id;
+      setState(userId, state);
+    } else {
+      const queueLen = getQueueLength();
+      const progress = await ctx.reply(
+        `🎥 رزولوشن: ${resolutionLabel}\n\n⏳ شما در صف هستید (موقعیت: ${position}/${queueLen})\nلطفاً صبر کنید...`
+      );
+      state.progressMessageId = progress.message_id;
+      setState(userId, state);
+    }
   });
 
   bot.callbackQuery(/^lv:(.+)$/, async (ctx) => {
