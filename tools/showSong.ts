@@ -2,13 +2,14 @@ import { InlineKeyboard, type Context } from "grammy";
 import type { TelegramSongWithFiles } from "../types/types";
 import { formatDuration } from "./formatDuration";
 import { formatBytes } from "./formatBytes";
-import { isFavorite } from "../src/dbUtils";
+import { incrementSongPlayCount, isFavorite } from "../src/dbUtils";
 
 export async function showSong(
   ctx: Context,
   song: TelegramSongWithFiles,
   send: boolean = true
 ) {
+  void Promise.resolve().then(() => incrementSongPlayCount(song.id));
   const userId = ctx.from?.id;
 
   const isSongInFavorites = isFavorite(userId || 0, song.id);

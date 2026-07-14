@@ -618,3 +618,13 @@ export function getArtistById(id: string): Artist | null {
 
   return artist;
 }
+
+export function incrementSongPlayCount(songId: string) {
+  db.prepare(
+    `
+    UPDATE songs
+    SET playCount = playCount + 1
+    WHERE id = ?
+  `
+  ).run(songId);
+}
