@@ -31,7 +31,9 @@ export async function sendSongToChannel(
   );
 
   captionArray.push(`🎤 ${hashtagify(song.artist)}`);
-  captionArray.push(`🎵 ${hashtagify(song.title)}\n#deybalal #دی_بلال`);
+  captionArray.push(
+    `🎵 ${hashtagify(song.title)}\n#deybalal #دی_بلال #لری #آهنگ_لری`
+  );
   captionArray.push(` `);
   captionArray.push(` `);
   captionArray.push(`@deybalalir`);
