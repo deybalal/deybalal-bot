@@ -27,6 +27,10 @@ import { registerAlbumCallbacks } from "./callbacks/albums";
 import { registerMenuCallbacks } from "./callbacks/menu";
 import { registerPlaylistCallbacks } from "./callbacks/playlists";
 import { registerUtilityCallbacks } from "./callbacks/utility";
+import { registerUpdateCommand } from "./commands/update";
+import { exec } from "node:child_process";
+import { promisify } from "node:util";
+import { verifyGithubSignature } from "../tools/verifyGithubSignature";
 
 const app = new Hono();
 
@@ -45,6 +49,7 @@ export function registerCommands(bot: Bot) {
   registerTopCommand(bot);
   registerMostplayedCommand(bot);
   registerAlbumsCommand(bot);
+  registerUpdateCommand(bot);
 }
 
 registerCommands(bot);
@@ -172,6 +177,49 @@ app.post("/webhook", async (c) => {
 
   await bot.handleUpdate(update);
   return c.text("ok");
+});
+
+app.post("/deploy", async (c) => {
+  if (!(await verifyGithubSignature(c))) {
+    return c.text("Unauthorized", 401);
+  }
+
+  const execAsync = promisify(exec);
+
+  const msg = await bot.api.sendMessage(
+    Number(process.env.ADMIN_ID),
+    "🔄 Updating bot..."
+  );
+
+  try {
+    const cwd = process.cwd();
+
+    await execAsync("git fetch origin", { cwd });
+    await execAsync("git reset --hard origin/main", { cwd });
+
+    // Install new dependencies if package.json changed
+    await execAsync("bun install --production", { cwd });
+
+    // Restart the bot
+    await execAsync("pm2 restart dey", { cwd });
+
+    await bot.api.editMessageText(
+      Number(process.env.ADMIN_ID),
+      msg.message_id,
+      "✅ Bot updated successfully!"
+    );
+  } catch (err: any) {
+    await bot.api.editMessageText(
+      Number(process.env.ADMIN_ID),
+      msg.message_id,
+      `❌ Update failed.\n\n<pre>${err.stderr || err.message}</pre>`,
+      {
+        parse_mode: "HTML",
+      }
+    );
+  }
+
+  return c.text("OK");
 });
 
 bot.catch((err) => {
