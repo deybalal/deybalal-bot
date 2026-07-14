@@ -206,6 +206,8 @@ app.post("/deploy", async (c) => {
       "✅ Bot updated successfully!"
     );
 
+    await sleep(500);
+
     // Restart the bot
     await execAsync("pm2 restart dey", { cwd });
   } catch (err: any) {
