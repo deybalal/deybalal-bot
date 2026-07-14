@@ -22,14 +22,14 @@ export function registerUpdateCommand(bot: Bot) {
       // Install new dependencies if package.json changed
       await execAsync("bun install --production", { cwd });
 
-      // Restart the bot
-      await execAsync("pm2 restart dey", { cwd });
-
       await ctx.api.editMessageText(
         ctx.chat.id,
         msg.message_id,
         "✅ Bot updated successfully!"
       );
+
+      // Restart the bot
+      await execAsync("pm2 restart dey", { cwd });
     } catch (err: any) {
       await ctx.api.editMessageText(
         ctx.chat.id,
