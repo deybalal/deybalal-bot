@@ -8,6 +8,17 @@ import {
 import { showSong } from "../../tools/showSong";
 import { hashtagify } from "../../tools/hashtagify";
 
+function highlightBotName(text: string): string {
+  return text.normalize("NFKC").replace(/دی\s*بلال/g, () => {
+    const url =
+      Math.random() < 0.5
+        ? "https://t.me/deybalalirbot"
+        : "https://t.me/deybalalir";
+
+    return `<a href="${url}"><b>دی بلال</b></a>`;
+  });
+}
+
 export function registerSongCallbacks(bot: Bot) {
   bot.callbackQuery(/^s:(.+)$/, async (ctx) => {
     console.log("Song query");
@@ -126,8 +137,8 @@ export function registerSongCallbacks(bot: Bot) {
 
     await ctx.answerCallbackQuery();
 
-    const lyrics = song.lyrics || "";
-    const MESSAGE_LIMIT = 4096;
+    const lyrics = highlightBotName(song.lyrics || "");
+    const MESSAGE_LIMIT = 1020;
 
     if (lyrics.length <= MESSAGE_LIMIT) {
       await ctx.replyWithPhoto(song.telegram.coverArt?.fileId || "", {
@@ -159,13 +170,13 @@ export function registerSongCallbacks(bot: Bot) {
 
       if (i === 0) {
         await ctx.replyWithPhoto(song.telegram.coverArt?.fileId || "", {
-          caption: `🎵 <b>${song.title}</b>\n\nصفحه ${i + 1}/${
+          caption: `🎵 <b>${song.title}</b>\n\n ${i + 1}/${
             chunks.length
           }\n\n<i>${chunk}</i>`,
           parse_mode: "HTML",
         });
       } else {
-        await ctx.reply(`<i>${chunk}</i>\n\nصفحه ${i + 1}/${chunks.length}`, {
+        await ctx.reply(`<i>${chunk}</i>\n\n ${i + 1}/${chunks.length}`, {
           parse_mode: "HTML",
         });
       }
