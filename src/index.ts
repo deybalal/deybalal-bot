@@ -200,14 +200,14 @@ app.post("/deploy", async (c) => {
     // Install new dependencies if package.json changed
     await execAsync("bun install --production", { cwd });
 
-    // Restart the bot
-    await execAsync("pm2 restart dey", { cwd });
-
     await bot.api.editMessageText(
       Number(process.env.ADMIN_ID),
       msg.message_id,
       "✅ Bot updated successfully!"
     );
+
+    // Restart the bot
+    await execAsync("pm2 restart dey", { cwd });
   } catch (err: any) {
     await bot.api.editMessageText(
       Number(process.env.ADMIN_ID),
