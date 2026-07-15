@@ -283,7 +283,7 @@ LIMIT 1;
 
 export function searchSongs(query: string, limit: number = 50): Song[] {
   const pattern = `%${query}%`;
-  const candidates = db
+  let candidates = db
     .query(
       `
 SELECT *
@@ -295,8 +295,9 @@ LIMIT 100
     )
     .all(pattern, pattern, pattern, pattern) as Song[];
 
-  if (candidates.length === 0) return [];
-
+  if (candidates.length === 0) {
+    candidates = db.query("SELECT * FROM songs").all() as Song[];
+  }
   const results = fuzzysort.go(query, candidates, {
     keys: ["title", "titleEn", "artist", "artistEn"],
     limit,
