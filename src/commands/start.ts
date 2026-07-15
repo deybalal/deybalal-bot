@@ -169,24 +169,22 @@ export function registerStartCommand(bot: Bot) {
       .text("⚙️ تنظیمات", "settings");
 
     let text = `🎵 خش اومیی همتبار!
-        
-        ربات تلگرام دی بلال،
-        
-        🎧  ${stats.songs.toLocaleString()} آهنگ داره!
-        🎤  ${stats.artists.toLocaleString()} خواننده داره!
-        
-        می‌تونی با عنوان یا خواننده جستجو کنی، موزیک تصادفی ببینی و آهنگ‌ هارو با کیفیت‌های مختلف دانلود کنی.
 
-        کانال تلگرام دی بلال:\n
-        @deybalalir
+ربات تلگرام دی بلال،
+ 
+ 🎧  ${stats.songs.toLocaleString()} آهنگ داره!
+ 🎤  ${stats.artists.toLocaleString()} خواننده داره!
+ 
+می‌تونی با عنوان یا خواننده جستجو کنی، موزیک تصادفی ببینی و آهنگ‌ هارو با کیفیت‌های مختلف دانلود کنی.
 
-        پلتفرم دی بلال(به زودی):\n
-        https://deybalal.ir
-        
-        رادیو آنلاین لری دی بلال(به زودی):\n
-        https://deybalal.ir/radio
-        
-        ✨ از اینکه از دی بلال استفاده میکنی، ممنونیم!`;
+کانال تلگرام دی بلال:\n @deybalalir
+
+پلتفرم دی بلال(به زودی):\nhttps://deybalal.ir
+ 
+رادیو آنلاین لری دی بلال(به زودی):\n
+ https://deybalal.ir/radio
+ 
+ ✨ از اینکه از دی بلال استفاده میکنی، ممنونیم!`;
 
     await ctx.reply(text, { reply_markup: inline });
   });
