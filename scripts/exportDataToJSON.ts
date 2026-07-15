@@ -141,4 +141,4 @@ export async function exportSongsToJson(): Promise<string> {
 // Run the export
 const savedPath = await exportSongsToJson();
 
-console.log(`✅ Exported ${savedPath}`);
+console.log(savedPath);

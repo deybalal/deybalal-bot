@@ -31,6 +31,7 @@ import { registerUpdateCommand } from "./commands/update";
 import { exec } from "node:child_process";
 import { promisify } from "node:util";
 import { verifyGithubSignature } from "../tools/verifyGithubSignature";
+import { registerBackupCommand } from "./commands/backup";
 
 const app = new Hono();
 
@@ -50,6 +51,7 @@ export function registerCommands(bot: Bot) {
   registerMostplayedCommand(bot);
   registerAlbumsCommand(bot);
   registerUpdateCommand(bot);
+  registerBackupCommand(bot);
 }
 
 registerCommands(bot);
