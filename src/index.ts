@@ -226,6 +226,35 @@ app.post("/deploy", async (c) => {
   return c.text("OK");
 });
 
+app.post("/bkUp09trxWhy41Not31", async (c) => {
+  try {
+    const auth = c.req.header("authorization");
+
+    if (auth !== `Bearer ${process.env.BACKUP_SECRET}`) {
+      return c.text("Not gonna happen", 403);
+    }
+
+    const execAsync = promisify(exec);
+    const cwd = process.cwd();
+
+    const { stdout } = await execAsync("bun run scripts/exportDataToJSON.ts", {
+      cwd,
+    });
+
+    const filePath = stdout.trim();
+
+    return c.json({ success: true, path: filePath });
+  } catch (err: any) {
+    return c.json(
+      {
+        success: false,
+        error: err.stderr || err.message,
+      },
+      500
+    );
+  }
+});
+
 bot.catch((err) => {
   console.error("Bot Error is: ", err.message);
 });
