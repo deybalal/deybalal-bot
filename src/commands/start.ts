@@ -176,6 +176,15 @@ export function registerStartCommand(bot: Bot) {
         🎤  ${stats.artists.toLocaleString()} خواننده داره!
         
         می‌تونی با عنوان یا خواننده جستجو کنی، موزیک تصادفی ببینی و آهنگ‌ هارو با کیفیت‌های مختلف دانلود کنی.
+
+        کانال تلگرام دی بلال:\n
+        @deybalalir
+
+        پلتفرم دی بلال(به زودی):\n
+        https://deybalal.ir
+        
+        رادیو آنلاین لری دی بلال(به زودی):\n
+        https://deybalal.ir/radio
         
         ✨ از اینکه از دی بلال استفاده میکنی، ممنونیم!`;
 
