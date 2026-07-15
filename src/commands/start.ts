@@ -12,7 +12,19 @@ import { showSong } from "../../tools/showSong";
 
 export function registerStartCommand(bot: Bot) {
   bot.command("start", async (ctx) => {
-    ensureUser(ctx.from!);
+    const handleUser = ensureUser(ctx.from!);
+
+    if (handleUser) {
+      await bot.api.sendMessage(
+        Number(process.env.ADMIN_ID!),
+        `User ${ctx.from!.first_name} started the bot!\n\nNumeric ID: ${
+          ctx.from!.id
+        }\nID: ${ctx.from!.username}\n\nFull name: ${`${ctx.from!.first_name} ${
+          ctx.from!.last_name ? ctx.from!.last_name : ""
+        }`}`,
+        { parse_mode: "HTML" }
+      );
+    }
 
     console.log("ctx.match? ", ctx.match);
 
