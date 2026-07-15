@@ -7,6 +7,7 @@
       "dependencies": {
         "@hono/node-server": "^2.0.6",
         "dotenv": "^17.4.2",
+        "fuzzysort": "^3.1.0",
         "grammy": "^1.44.0",
         "hono": "^4.12.27",
         "node-cron": "^4.6.0",
@@ -37,6 +38,8 @@
     "dotenv": ["dotenv@17.4.2", "", {}, "sha512-nI4U3TottKAcAD9LLud4Cb7b2QztQMUEfHbvhTH09bqXTxnSie8WnjPALV/WMCrJZ6UV/qHJ6L03OqO3LcdYZw=="],
 
     "event-target-shim": ["event-target-shim@5.0.1", "", {}, "sha512-i/2XbnSz/uxRCU6+NdVJgKWDTM427+MqYbkQzD321DuCQJUqOuJKIA0IM2+W2xtYHdKOmZ4dR6fExsd4SXL+WQ=="],
+
+    "fuzzysort": ["fuzzysort@3.1.0", "", {}, "sha512-sR9BNCjBg6LNgwvxlBd0sBABvQitkLzoVY9MYYROQVX/FvfJ4Mai9LsGhDgd8qYdds0bY77VzYd5iuB+v5rwQQ=="],
 
     "grammy": ["grammy@1.44.0", "", { "dependencies": { "@grammyjs/types": "3.28.0", "abort-controller": "^3.0.0", "debug": "^4.4.3", "node-fetch": "^2.7.0" } }, "sha512-gGVykS5+c5f1tPV97LuU6IDRMawE2NzpwM9pNz58HQ35IZXDnYL3VOLvNzYognPSeBIOSzQXRu5w96V0aY8y8A=="],
 
