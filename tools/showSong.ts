@@ -19,6 +19,7 @@ export async function showSong(
 
 👤 <b>خواننده:</b> ${song.artist}
 ⏱ <b>مدت:</b> ${formatDuration(song.duration)}
+📊 <b>بازدید:</b> ${(song.playCount ?? 0).toLocaleString()}
 💾 <b>دانلودها:</b> ${(song.downloads ?? 0).toLocaleString()}
 ${
   song.has_posted
