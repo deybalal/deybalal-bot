@@ -9,7 +9,7 @@ export function registerSearchCommand(bot: Bot) {
 
     if (!query) {
       await ctx.reply(
-        "🔍 لطفاً عبارت جستجو را وارد کنید.\n\nمثال: <code>/search بهرام</code>",
+        "🔍 لطفاً عبارت جستجو را وارد کنید.\n\nمثال: <code>/search رزمجو</code>",
         { parse_mode: "HTML" }
       );
       return;

@@ -39,6 +39,8 @@ const app = new Hono();
 
 export const bot = new Bot(process.env.BOT_TOKEN!);
 
+const WEBHOOK_URL = process.env.rand0mh00kChangeIt43ffrt!;
+
 function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
 }
@@ -178,7 +180,7 @@ bot.on("message:text", async (ctx) => {
   await sendSearchResults(ctx, text, 0, songs);
 });
 
-app.post("/webhook", async (c) => {
+app.post(`/${WEBHOOK_URL}`, async (c) => {
   try {
     const update = await c.req.json();
 
@@ -272,8 +274,6 @@ app.post("/bkUp09trxWhy41Not31", async (c) => {
 bot.catch((err) => {
   console.error("Bot Error is: ", err.message);
 });
-
-bot.start({ drop_pending_updates: true });
 
 const PORT = parseInt(process.env.PORT!);
 
