@@ -183,7 +183,7 @@ bot.on("message:text", async (ctx) => {
   await sendSearchResults(ctx, text, 0, songs);
 });
 
-app.post(`/${WEBHOOK_URL}`, async (c) => {
+app.post(`/firsttempwebhook`, async (c) => {
   try {
     return await webhookCallback(bot, "hono")(c);
   } catch (error) {
