@@ -19,7 +19,9 @@ export function registerStartCommand(bot: Bot) {
         Number(process.env.ADMIN_ID!),
         `User ${ctx.from!.first_name} started the bot!\n\nNumeric ID: ${
           ctx.from!.id
-        }\nID: ${ctx.from!.username}\n\nFull name: ${`${ctx.from!.first_name} ${
+        }\n${
+          ctx.from!.username ? `ID: @${ctx.from!.username}` : ""
+        }\n\nFull name: ${`${ctx.from!.first_name} ${
           ctx.from!.last_name ? ctx.from!.last_name : ""
         }`}`,
         { parse_mode: "HTML" }
@@ -155,15 +157,17 @@ export function registerStartCommand(bot: Bot) {
     const stats = getStats();
 
     const inline = new InlineKeyboard()
-      .text("🔍 جستجو", "search_prompt")
       .text("🎵 موزیک تصادفی", "random")
+      .text("💡 راهنما", "help")
+      .row()
+      .text("🔍 جستجو", "search_prompt")
+      .switchInlineCurrent("🔍 جستجو اینلاین", "")
       .row()
       .text("⭐علاقه‌مندی ها", "favorites:0")
+      .text("💿 آلبوم‌ها", "albums:0")
       .row()
       .text("📊 بیشترین بازدید", "top:0")
       .text("🎵 بیشترین دانلود", "mostplayed:0")
-      .row()
-      .text("💿 آلبوم‌ها", "albums:0")
       .row()
       .text("ℹ️ درباره", "about")
       .text("⚙️ تنظیمات", "settings");
@@ -179,13 +183,16 @@ export function registerStartCommand(bot: Bot) {
 
 کانال تلگرام دی بلال:\n @deybalalir
 
-پلتفرم دی بلال(به زودی):\nhttps://deybalal.ir
+پلتفرم دی بلال(به زودی):\n<a href="https://deybalal.ir">https://deybalal.ir</a>
  
 رادیو آنلاین لری دی بلال(به زودی):\n
- https://deybalal.ir/radio
+<a href="https://deybalal.ir/radio">https://deybalal.ir/radio</a>
+
+<a href="https://github.com/deybalal/deybalal-bot"> کد منبع ربات به زبان Node JS</a>
+
  
  ✨ از اینکه از دی بلال استفاده میکنی، ممنونیم!`;
 
-    await ctx.reply(text, { reply_markup: inline });
+    await ctx.reply(text, { parse_mode: "HTML", reply_markup: inline });
   });
 }

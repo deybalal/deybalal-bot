@@ -32,6 +32,8 @@ import { exec } from "node:child_process";
 import { promisify } from "node:util";
 import { verifyGithubSignature } from "../tools/verifyGithubSignature";
 import { registerBackupCommand } from "./commands/backup";
+import { registerHelpCommand } from "./commands/help";
+import { registerHelpCallback } from "./callbacks/help";
 
 const app = new Hono();
 
@@ -52,6 +54,7 @@ export function registerCommands(bot: Bot) {
   registerAlbumsCommand(bot);
   registerUpdateCommand(bot);
   registerBackupCommand(bot);
+  registerHelpCommand(bot);
 }
 
 registerCommands(bot);
@@ -65,6 +68,7 @@ export function registerCallbacks(bot: Bot) {
   registerMenuCallbacks(bot);
   registerPlaylistCallbacks(bot);
   registerUtilityCallbacks(bot);
+  registerHelpCallback(bot);
 }
 
 registerCallbacks(bot);
@@ -175,10 +179,20 @@ bot.on("message:text", async (ctx) => {
 });
 
 app.post("/webhook", async (c) => {
-  const update = await c.req.json();
+  try {
+    const update = await c.req.json();
 
-  await bot.handleUpdate(update);
-  return c.text("ok");
+    await bot.handleUpdate(update);
+    return c.text("ok");
+  } catch (error) {
+    await bot.api.sendMessage(
+      Number(process.env.ADMIN_ID),
+      `Error in bot: ${(error as Error).message}`,
+      {
+        parse_mode: "HTML",
+      }
+    );
+  }
 });
 
 app.post("/deploy", async (c) => {

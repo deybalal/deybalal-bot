@@ -9,15 +9,17 @@ export function registerMenuCallbacks(bot: Bot) {
     const stats = getStats();
 
     const inline = new InlineKeyboard()
-      .text("🔍 جستجو", "search_prompt")
       .text("🎵 موزیک تصادفی", "random")
+      .text("💡 راهنما", "help")
+      .row()
+      .text("🔍 جستجو", "search_prompt")
+      .switchInlineCurrent("🔍 جستجو اینلاین", "")
       .row()
       .text("⭐علاقه‌مندی ها", "favorites:0")
+      .text("💿 آلبوم‌ها", "albums:0")
       .row()
       .text("📊 بیشترین بازدید", "top:0")
       .text("🎵 بیشترین دانلود", "mostplayed:0")
-      .row()
-      .text("💿 آلبوم‌ها", "albums:0")
       .row()
       .text("ℹ️ درباره", "about")
       .text("⚙️ تنظیمات", "settings");
@@ -41,12 +43,15 @@ export function registerMenuCallbacks(bot: Bot) {
   bot.callbackQuery("about", async (ctx) => {
     const stats = getStats();
 
-    const text = `ℹ️ <b>درباره ربات</b>
-
+    const text = `
 🎵 <b>ربات تلگرام دی بلال</b>
 
 🎧 ${stats.songs.toLocaleString()} آهنگ
 🎤 ${stats.artists.toLocaleString()} هنرمند
+
+
+این ربات اپن سورسه (منبع باز) و کدهای بات رو میتونید توی پیتهاب مشاهده کنید و در صورت تمایل توی توسعه پروژه مشارکت داشته باشید!
+https://github.com/deybalal/deybalal-bot
 
 ✨ قابلیت‌ها:
 • جستجوی آهنگ با عنوان یا هنرمند
