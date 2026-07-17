@@ -1,4 +1,4 @@
-import { Bot, GrammyError } from "grammy";
+import { Bot, GrammyError, webhookCallback } from "grammy";
 import type { InlineQueryResultCachedAudio } from "grammy/types";
 import "dotenv/config";
 import { serve } from "@hono/node-server";
@@ -34,8 +34,11 @@ import { verifyGithubSignature } from "../tools/verifyGithubSignature";
 import { registerBackupCommand } from "./commands/backup";
 import { registerHelpCommand } from "./commands/help";
 import { registerHelpCallback } from "./callbacks/help";
+import { logger } from "hono/logger";
 
 const app = new Hono();
+
+app.use(logger());
 
 export const bot = new Bot(process.env.BOT_TOKEN!);
 
@@ -182,11 +185,9 @@ bot.on("message:text", async (ctx) => {
 
 app.post(`/${WEBHOOK_URL}`, async (c) => {
   try {
-    const update = await c.req.json();
-
-    await bot.handleUpdate(update);
-    return c.text("ok");
+    return await webhookCallback(bot, "hono")(c);
   } catch (error) {
+    console.error("Webhook Error:", (error as Error).message);
     await bot.api.sendMessage(
       Number(process.env.ADMIN_ID),
       `Error in bot: ${(error as Error).message}`,
@@ -273,6 +274,11 @@ app.post("/bkUp09trxWhy41Not31", async (c) => {
 
 bot.catch((err) => {
   console.error("Bot Error is: ", err.message);
+});
+
+app.onError((err, c) => {
+  console.error("Hono error:", err);
+  return c.text("Internal Error", 500);
 });
 
 const PORT = parseInt(process.env.PORT!);
