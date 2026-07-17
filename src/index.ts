@@ -39,7 +39,7 @@ const app = new Hono();
 
 export const bot = new Bot(process.env.BOT_TOKEN!);
 
-const WEBHOOK_URL = process.env.rand0mh00kChangeIt43ffrt!;
+const WEBHOOK_URL = process.env.WEBHOOK_PATH!;
 
 function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
