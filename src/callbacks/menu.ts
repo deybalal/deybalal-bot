@@ -74,6 +74,9 @@ https://github.com/deybalal/deybalal-bot
 
     await ctx.reply(text, {
       parse_mode: "HTML",
+      link_preview_options: {
+        is_disabled: true,
+      },
       reply_markup: {
         inline_keyboard: [[{ text: "🔙 بازگشت", callback_data: "home" }]],
       },

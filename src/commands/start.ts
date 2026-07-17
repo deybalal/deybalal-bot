@@ -193,6 +193,10 @@ export function registerStartCommand(bot: Bot) {
  
  ✨ از اینکه از دی بلال استفاده میکنی، ممنونیم!`;
 
-    await ctx.reply(text, { parse_mode: "HTML", reply_markup: inline });
+    await ctx.reply(text, {
+      parse_mode: "HTML",
+      reply_markup: inline,
+      link_preview_options: { is_disabled: true },
+    });
   });
 }
