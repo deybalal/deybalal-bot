@@ -618,3 +618,30 @@ export function incrementSongPlayCount(songId: string) {
   `
   ).run(songId);
 }
+
+export function getRandomSongWithLyrics(): TelegramSongWithFiles | null {
+  const song = db
+    .query(
+      `
+SELECT *
+FROM songs
+WHERE lyrics IS NOT NULL AND LENGTH(lyrics) >= 225
+ORDER BY RANDOM()
+LIMIT 1;
+`
+    )
+    .get() as Song | null;
+
+  if (!song) return null;
+
+  return {
+    ...song,
+    telegram: {
+      coverArt: getTelegramFile(song.id, "photo", ""),
+      ogg: getTelegramFile(song.id, "voice", ""),
+      "64": getTelegramFile(song.id, "audio", "64"),
+      "128": getTelegramFile(song.id, "audio", "128"),
+      "320": getTelegramFile(song.id, "audio", "320"),
+    },
+  };
+}

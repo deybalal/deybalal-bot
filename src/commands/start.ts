@@ -169,6 +169,8 @@ export function registerStartCommand(bot: Bot) {
       .text("📊 بیشترین بازدید", "top:0")
       .text("🎵 بیشترین دانلود", "mostplayed:0")
       .row()
+      .text("📝 متن آهنگ تصادفی", "randomlyric")
+      .row()
       .text("ℹ️ درباره", "about")
       .text("⚙️ تنظیمات", "settings");
 

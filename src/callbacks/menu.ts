@@ -21,6 +21,8 @@ export function registerMenuCallbacks(bot: Bot) {
       .text("📊 بیشترین بازدید", "top:0")
       .text("🎵 بیشترین دانلود", "mostplayed:0")
       .row()
+      .text("📝 متن آهنگ تصادفی", "randomlyric")
+      .row()
       .text("ℹ️ درباره", "about")
       .text("⚙️ تنظیمات", "settings");
 
@@ -50,7 +52,7 @@ export function registerMenuCallbacks(bot: Bot) {
 🎤 ${stats.artists.toLocaleString()} هنرمند
 
 
-این ربات اپن سورسه (منبع باز) و کدهای بات رو میتونید توی پیتهاب مشاهده کنید و در صورت تمایل توی توسعه پروژه مشارکت داشته باشید!
+این ربات اپن سورسه (منبع باز) و کدهای بات رو میتونید توی گیتهاب مشاهده کنید و در صورت تمایل توی توسعه پروژه مشارکت داشته باشید!
 https://github.com/deybalal/deybalal-bot
 
 ✨ قابلیت‌ها:

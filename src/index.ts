@@ -35,6 +35,7 @@ import { registerBackupCommand } from "./commands/backup";
 import { registerHelpCommand } from "./commands/help";
 import { registerHelpCallback } from "./callbacks/help";
 import { logger } from "hono/logger";
+import { registerRandomLyricCallbacks } from "./callbacks/randomLyric";
 
 const app = new Hono();
 
@@ -74,6 +75,7 @@ export function registerCallbacks(bot: Bot) {
   registerPlaylistCallbacks(bot);
   registerUtilityCallbacks(bot);
   registerHelpCallback(bot);
+  registerRandomLyricCallbacks(bot);
 }
 
 registerCallbacks(bot);
