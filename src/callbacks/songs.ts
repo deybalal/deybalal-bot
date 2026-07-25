@@ -138,7 +138,7 @@ export function registerSongCallbacks(bot: Bot) {
     await ctx.answerCallbackQuery();
 
     const lyrics = highlightBotName(song.lyrics || "");
-    const MESSAGE_LIMIT = 1020;
+    const MESSAGE_LIMIT = 1010 - song.title.length;
 
     if (lyrics.length <= MESSAGE_LIMIT) {
       await ctx.replyWithPhoto(song.telegram.coverArt?.fileId || "", {
