@@ -184,3 +184,9 @@ export interface VideoJob {
   resolve: () => void;
   reject: (err: Error) => void;
 }
+
+export type SearchResult = {
+  song: Song;
+  reason: "title" | "artist" | "lyrics";
+  snippet?: string;
+};

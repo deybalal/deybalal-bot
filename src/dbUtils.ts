@@ -2,11 +2,13 @@ import * as fuzzysort from "fuzzysort";
 import { db } from "./db";
 import type {
   Artist,
+  SearchResult,
   Song,
   TelegramFile,
   TelegramSongWithFiles,
 } from "../types/types";
 import type { User } from "grammy/types";
+import { lyricSnippet } from "../tools/lyricsSnippet";
 
 export function ensureUser(user: User): boolean {
   const now = Date.now();
@@ -281,29 +283,58 @@ LIMIT 1;
   };
 }
 
-export function searchSongs(query: string, limit: number = 50): Song[] {
+export function searchSongs(query: string, limit: number = 50): SearchResult[] {
   const pattern = `%${query}%`;
   let candidates = db
     .query(
       `
 SELECT *
 FROM songs
-WHERE title LIKE ? OR titleEn LIKE ? OR artist LIKE ? OR artistEn LIKE ?
+WHERE title LIKE ? OR titleEn LIKE ? OR artist LIKE ? OR artistEn LIKE ? OR lyrics LIKE ?
 ORDER BY playCount DESC
 LIMIT 100
 `
     )
-    .all(pattern, pattern, pattern, pattern) as Song[];
+    .all(pattern, pattern, pattern, pattern, pattern) as Song[];
 
   if (candidates.length === 0) {
     candidates = db.query("SELECT * FROM songs").all() as Song[];
   }
   const results = fuzzysort.go(query, candidates, {
-    keys: ["title", "titleEn", "artist", "artistEn"],
+    keys: ["title", "titleEn", "artist", "artistEn", "lyrics"],
     limit,
   });
 
-  return results.map((r) => r.obj);
+  return results.map((r) => {
+    let reason: SearchResult["reason"] = "lyrics";
+
+    const keys = r.obj;
+
+    if (
+      keys.title?.toLowerCase().includes(query.toLowerCase()) ||
+      keys.titleEn?.toLowerCase().includes(query.toLowerCase())
+    ) {
+      reason = "title";
+    } else if (
+      keys.artist?.toLowerCase().includes(query.toLowerCase()) ||
+      keys.artistEn?.toLowerCase().includes(query.toLowerCase())
+    ) {
+      reason = "artist";
+    }
+
+    if (reason === "lyrics") {
+      return {
+        song: r.obj,
+        reason,
+        snippet: lyricSnippet(r.obj.lyrics || "", query),
+      };
+    } else {
+      return {
+        song: r.obj,
+        reason,
+      };
+    }
+  });
 }
 
 export function incrementSongDownloads(id: string) {

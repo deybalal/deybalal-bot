@@ -26,7 +26,7 @@ export function registerRandomLyricCallbacks(bot: Bot) {
     }
 
     const inline = new InlineKeyboard()
-      .text("🎧 نمایش", `s:${song.id}`)
+      .text("🎧 نمایش آهنگ", `s:${song.id}`)
       .row()
       .text("🎵 بعدی", "randomlyric")
       .row();

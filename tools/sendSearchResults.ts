@@ -8,17 +8,23 @@ export async function sendSearchResults(
   allSongs?: any[]
 ) {
   const PAGE_SIZE = 20;
-  const songs = allSongs || searchSongs(query);
   const start = page * PAGE_SIZE;
   const end = start + PAGE_SIZE;
-  const pageSongs = songs.slice(start, end);
 
-  const buttons = pageSongs.map((song: any) => [
-    {
-      text: `🎵 ${song.title} — ${song.artist}`,
-      callback_data: `s:${song.id}`,
-    },
-  ]);
+  const results = allSongs || searchSongs(query);
+
+  const pageResults = results.slice(start, end);
+
+  const buttons = pageResults.map(({ song, reason }) => {
+    const emoji = reason === "title" ? "🎵" : reason === "artist" ? "🎤" : "📝";
+
+    return [
+      {
+        text: `${emoji} ${song.title} — ${song.artist}`,
+        callback_data: `s:${song.id}`,
+      },
+    ];
+  });
 
   const navButtons = [];
 
@@ -29,7 +35,7 @@ export async function sendSearchResults(
     });
   }
 
-  const hasNext = end < songs.length;
+  const hasNext = end < results.length;
 
   if (hasNext) {
     navButtons.push({
@@ -42,7 +48,7 @@ export async function sendSearchResults(
     inline_keyboard: [
       [
         {
-          text: `🔍 ${songs.length} نتیجه برای "${query}"`,
+          text: `🔍 ${results.length} نتیجه برای "${query}"`,
           callback_data: "no_callback",
         },
       ],

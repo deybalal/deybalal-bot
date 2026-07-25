@@ -99,35 +99,41 @@ bot.on("inline_query", async (ctx) => {
     const userId = ctx.from!.id;
     const preferredQuality = getPreferredQuality(userId);
 
-    const songs = searchSongs(query, 50);
+    const results = searchSongs(query, 50);
 
     const validResults: InlineQueryResultCachedAudio[] = [];
 
-    for (const song of songs.slice(0, 50)) {
+    for (const result of results.slice(0, 50)) {
       const audioPreferred = getTelegramFile(
-        song.id,
+        result.song.id,
         "audio",
         preferredQuality
       );
-      const audio128 = getTelegramFile(song.id, "audio", "128");
-      const audio320 = getTelegramFile(song.id, "audio", "320");
-      const audio64 = getTelegramFile(song.id, "audio", "64");
+      const audio128 = getTelegramFile(result.song.id, "audio", "128");
+      const audio320 = getTelegramFile(result.song.id, "audio", "320");
+      const audio64 = getTelegramFile(result.song.id, "audio", "64");
 
       const audioFile = audioPreferred || audio128 || audio320 || audio64;
 
       if (!audioFile?.fileId) continue;
 
-      if (!song.title) {
-        console.log("song.title is empty", song);
+      if (!result.song.title) {
+        console.log("song.title is empty", result);
       }
 
-      const artists = JSON.parse(song.artists as unknown as string);
+      const artists = JSON.parse(result.song.artists as unknown as string);
 
       validResults.push({
         type: "audio",
-        id: song.id,
+        id: result.song.id,
         audio_file_id: audioFile.fileId,
-        caption: `🎵 ${song.title}\n👤 ${artists
+        caption: `${
+          result.reason === "title"
+            ? "🎵"
+            : result.reason === "artist"
+            ? "🎤"
+            : "📝"
+        } ${result.song.title}\n👤 ${artists
           .map(
             (s: { id: string; name: string }) =>
               `<a href="https://t.me/deybalalirbot?start=a_${s.id}">${s.name}</a>`
@@ -140,7 +146,7 @@ bot.on("inline_query", async (ctx) => {
     const encoded = Buffer.from(query, "utf8").toString("base64url");
 
     await ctx.answerInlineQuery(validResults, {
-      cache_time: 300,
+      cache_time: 20,
       is_personal: true,
       button: {
         text: `${validResults.length} آهنگ پیدا شد`,
@@ -173,16 +179,16 @@ bot.on("message:text", async (ctx) => {
 
   ensureUser(ctx.from!);
 
-  const songs = searchSongs(text);
+  const results = searchSongs(text);
 
-  if (songs.length === 0) {
+  if (results.length === 0) {
     await ctx.reply(`🔍 نتیجه‌ای برای "<b>${text}</b>" پیدا نشد.`, {
       parse_mode: "HTML",
     });
     return;
   }
 
-  await sendSearchResults(ctx, text, 0, songs);
+  await sendSearchResults(ctx, text, 0, results);
 });
 
 app.post(`/firsttempwebhook`, async (c) => {

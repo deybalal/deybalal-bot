@@ -176,24 +176,26 @@ export function registerStartCommand(bot: Bot) {
 
     let text = `🎵 خش اومیی همتبار!
 
+اسم آهنگ یا خواننده ی مدنظرت رو برام بفرست!
+
 ربات تلگرام دی بلال،
  
  🎧  ${stats.songs.toLocaleString()} آهنگ داره!
  🎤  ${stats.artists.toLocaleString()} خواننده داره!
  
-می‌تونی با عنوان یا اسم خواننده جستجو کنی، موزیک تصادفی ببینی و آهنگ‌ هارو با کیفیت‌های مختلف دانلود کنی.
+می‌تونی به فارسی یا انگلیسی، اسم آهنگ یا اسم خواننده رو برای جستوجو بفرستی، موزیک تصادفی ببینی و آهنگ‌ هارو با کیفیت‌های مختلف دانلود کنی.
 
 کانال تلگرام دی بلال:\n @deybalalir
-
-پلتفرم دی بلال(به زودی):\n<a href="https://deybalal.ir">https://deybalal.ir</a>
- 
-رادیو آنلاین لری دی بلال(به زودی):\n
-<a href="https://deybalal.ir/radio">https://deybalal.ir/radio</a>
 
 <a href="https://github.com/deybalal/deybalal-bot"> کد منبع ربات به زبان Node JS</a>
 
  
  ✨ از اینکه از دی بلال استفاده میکنی، ممنونیم!`;
+
+    // پلتفرم دی بلال(به زودی):\n<a href="https://deybalal.ir">https://deybalal.ir</a>
+
+    // رادیو آنلاین لری دی بلال(به زودی):\n
+    // <a href="https://deybalal.ir/radio">https://deybalal.ir/radio</a>
 
     await ctx.reply(text, {
       parse_mode: "HTML",
