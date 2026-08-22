@@ -36,6 +36,7 @@ import { registerHelpCommand } from "./commands/help";
 import { registerHelpCallback } from "./callbacks/help";
 import { logger } from "hono/logger";
 import { registerRandomLyricCallbacks } from "./callbacks/randomLyric";
+import { timeout } from "hono/timeout";
 
 const app = new Hono();
 
@@ -170,6 +171,7 @@ bot.on("message:photo", async (ctx) => {
 });
 
 bot.on("message:text", async (ctx) => {
+  console.log("ctx.message", ctx.message);
   if (ctx.message.date + 120 < Math.ceil(Date.now() / 1000)) {
     console.error("Expired Call!");
     return;
@@ -210,6 +212,8 @@ app.post(`/firsttempwebhook`, async (c) => {
     );
   }
 });
+
+app.use("/firsttempwebhook", timeout(35000));
 
 app.post("/deploy", async (c) => {
   if (!(await verifyGithubSignature(c))) {
