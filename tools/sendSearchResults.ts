@@ -1,5 +1,15 @@
 import type { Context } from "grammy";
 import { searchSongs } from "../src/dbUtils";
+import { truncateUtf8 } from "./truncateUtf8";
+
+function buildSearchCallback(query: string, page: number): string {
+  const suffix = `search::${page}`;
+  const availableBytes = 64 - new TextEncoder().encode(suffix).length;
+
+  const safeQuery = truncateUtf8(query, availableBytes);
+
+  return `search:${safeQuery}:${page}`;
+}
 
 export async function sendSearchResults(
   ctx: Context,
@@ -31,7 +41,7 @@ export async function sendSearchResults(
   if (page > 0) {
     navButtons.push({
       text: "⬅️ قبلی",
-      callback_data: `search:${query}:${page - 1}`,
+      callback_data: buildSearchCallback(query, page - 1),
     });
   }
 
@@ -40,7 +50,7 @@ export async function sendSearchResults(
   if (hasNext) {
     navButtons.push({
       text: "بعدی ➡️",
-      callback_data: `search:${query}:${page + 1}`,
+      callback_data: buildSearchCallback(query, page + 1),
     });
   }
 
