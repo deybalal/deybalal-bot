@@ -46,6 +46,14 @@ export const bot = new Bot(process.env.BOT_TOKEN!);
 
 const WEBHOOK_URL = process.env.WEBHOOK_PATH!;
 
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
 function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
 }
@@ -202,14 +210,56 @@ app.post(`/firsttempwebhook`, async (c) => {
   try {
     return await webhookCallback(bot, "hono")(c);
   } catch (error) {
-    console.error("Webhook Error:", error as Error);
-    await bot.api.sendMessage(
-      Number(process.env.ADMIN_ID),
-      `Error in bot: ${(error as Error).message}`,
-      {
-        parse_mode: "HTML",
-      }
+    console.error("========== WEBHOOK ERROR ==========");
+
+    if (error instanceof Error) {
+      console.error("Name:", error.name);
+      console.error("Message:", error.message);
+      console.error("Stack:", error.stack);
+    }
+
+    // GrammyError-specific fields
+    const grammyError = error as any;
+
+    console.error("Method:", grammyError.method);
+    console.error("Payload:", grammyError.payload);
+    console.error("Error:", grammyError.error);
+    console.error("Description:", grammyError.error?.description);
+    console.error("Error Code:", grammyError.error?.error_code);
+
+    console.error(
+      "FULL ERROR:",
+      JSON.stringify(error, Object.getOwnPropertyNames(error), 2)
     );
+
+    console.error("===================================");
+
+    try {
+      await bot.api.sendMessage(
+        Number(process.env.ADMIN_ID),
+        `<b>Bot Error</b>\n\n<pre>${escapeHtml(
+          JSON.stringify(
+            {
+              name: grammyError.name,
+              message: grammyError.message,
+              method: grammyError.method,
+              payload: grammyError.payload,
+              error: grammyError.error,
+              stack: grammyError.stack,
+            },
+            null,
+            2
+          )
+        )}</pre>`,
+        {
+          parse_mode: "HTML",
+        }
+      );
+    } catch (notifyError) {
+      console.error("Failed to notify admin:", notifyError);
+    }
+
+    return c.text("Update Received", 200);
   }
 });
 
