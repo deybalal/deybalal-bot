@@ -6,6 +6,14 @@ const execAsync = promisify(exec);
 
 export function registerUpdateCommand(bot: Bot) {
   bot.command("update", async (ctx) => {
+    console.log("ctx.message", ctx.message);
+    if (
+      (ctx.message?.date || 1000000000) + 120 <
+      Math.ceil(Date.now() / 1000)
+    ) {
+      console.error("Expired Call!");
+      return;
+    }
     if (ctx.from?.id !== Number(process.env.ADMIN_ID)) {
       await ctx.reply("You are not authorized to use this command.");
       return;
