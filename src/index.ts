@@ -170,6 +170,11 @@ bot.on("message:photo", async (ctx) => {
 });
 
 bot.on("message:text", async (ctx) => {
+  if (ctx.message.date + 120 < Math.ceil(Date.now() / 1000)) {
+    console.error("Expired Call!");
+    return;
+  }
+
   const text = ctx.message.text.trim();
 
   if (text.startsWith("/")) return;
