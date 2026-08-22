@@ -212,25 +212,23 @@ app.post(`/firsttempwebhook`, async (c) => {
   } catch (error) {
     console.error("========== WEBHOOK ERROR ==========");
 
-    if (error instanceof Error) {
-      console.error("Name:", error.name);
-      console.error("Message:", error.message);
-      console.error("Stack:", error.stack);
-    }
+    console.error("Error:", error);
 
+    const err = error as any;
     // GrammyError-specific fields
     const grammyError = error as any;
 
-    console.error("Method:", grammyError.method);
-    console.error("Payload:", grammyError.payload);
-    console.error("Error:", grammyError.error);
-    console.error("Description:", grammyError.error?.description);
-    console.error("Error Code:", grammyError.error?.error_code);
+    console.error("Error name:", err?.name);
+    console.error("Error message:", err?.message);
+    console.error("Error cause:", err?.cause);
 
-    console.error(
-      "FULL ERROR:",
-      JSON.stringify(error, Object.getOwnPropertyNames(error), 2)
-    );
+    // GrammyError properties may be nested/wrapped
+    console.error("Method:", err?.method);
+    console.error("Payload:", err?.payload);
+
+    if (err?.payload) {
+      console.error("PAYLOAD JSON:", JSON.stringify(err.payload, null, 2));
+    }
 
     console.error("===================================");
 
@@ -249,7 +247,7 @@ app.post(`/firsttempwebhook`, async (c) => {
             },
             null,
             2
-          )
+          ).slice(0, 4000)
         )}</pre>`,
         {
           parse_mode: "HTML",
