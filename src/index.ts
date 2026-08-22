@@ -37,6 +37,7 @@ import { registerHelpCallback } from "./callbacks/help";
 import { logger } from "hono/logger";
 import { registerRandomLyricCallbacks } from "./callbacks/randomLyric";
 import { timeout } from "hono/timeout";
+import { sendErrorMessages } from "../tools/sendErrorMessages";
 
 const app = new Hono();
 
@@ -233,28 +234,9 @@ app.post(`/firsttempwebhook`, async (c) => {
     console.error("===================================");
 
     try {
-      await bot.api.sendMessage(
-        Number(process.env.ADMIN_ID),
-        `<b>Bot Error</b>\n\n<pre>${escapeHtml(
-          JSON.stringify(
-            {
-              name: grammyError.name,
-              message: grammyError.message,
-              method: grammyError.method,
-              payload: grammyError.payload,
-              error: grammyError.error,
-              stack: grammyError.stack,
-            },
-            null,
-            2
-          ).slice(0, 4000)
-        )}</pre>`,
-        {
-          parse_mode: "HTML",
-        }
-      );
-    } catch (notifyError) {
-      console.error("Failed to notify admin:", notifyError);
+      await sendErrorMessages(bot, Number(process.env.ADMIN_ID), grammyError);
+    } catch (err) {
+      console.error("Failed to send error notification:", err);
     }
 
     return c.text("Update Received", 200);
