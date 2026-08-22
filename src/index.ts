@@ -202,7 +202,7 @@ app.post(`/firsttempwebhook`, async (c) => {
   try {
     return await webhookCallback(bot, "hono")(c);
   } catch (error) {
-    console.error("Webhook Error:", (error as Error).message);
+    console.error("Webhook Error:", error as Error);
     await bot.api.sendMessage(
       Number(process.env.ADMIN_ID),
       `Error in bot: ${(error as Error).message}`,
