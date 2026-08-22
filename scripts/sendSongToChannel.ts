@@ -26,9 +26,6 @@ export async function sendSongToChannel(
     );
   }
   captionArray.push(`⏳ <b>زمان:</b> ${formatDuration(song.duration)}`);
-  captionArray.push(
-    `📊 <b>بازدیدها:</b> ${(song.playCount ?? 0).toLocaleString()}`
-  );
 
   captionArray.push(`🎤 ${hashtagify(song.artist)}`);
   captionArray.push(
