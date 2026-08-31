@@ -30,6 +30,66 @@ export function registerStartCommand(bot: Bot) {
 
     console.log("ctx.match? ", ctx.match);
 
+    if (ctx.match?.startsWith("login_") || ctx.match?.startsWith("auth_")) {
+      const token = ctx.match.startsWith("login_")
+        ? ctx.match.substring(6)
+        : ctx.match.substring(5);
+
+      try {
+        const apiUrl =
+          process.env.API_URL ||
+          process.env.NEXT_PUBLIC_APP_URL ||
+          "http://localhost:3000";
+
+        const response = await fetch(`${apiUrl}/api/auth/telegram/verify`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(process.env.TELEGRAM_BOT_SECRET
+              ? { "x-telegram-bot-secret": process.env.TELEGRAM_BOT_SECRET }
+              : {}),
+          },
+          body: JSON.stringify({
+            token,
+            telegramUser: {
+              id: ctx.from!.id,
+              first_name: ctx.from!.first_name,
+              last_name: ctx.from!.last_name,
+              username: ctx.from!.username,
+            },
+          }),
+        });
+
+        const result = (await response.json()) as {
+          success: boolean;
+          message?: string;
+        };
+
+        if (result.success) {
+          await ctx.reply(
+            `🎉 <b>ورود با موفقیت تأیید شد!</b>\n\nهمتبار گرامی <b>${
+              ctx.from!.first_name
+            }</b>، ورود شما به وب‌سایت دی‌بلال با موفقیت انجام شد.\nاکنون می‌توانید به مرورگر خود بازگردید و از تمام امکانات سایت استفاده کنید!`,
+            { parse_mode: "HTML" }
+          );
+        } else {
+          await ctx.reply(
+            `❌ <b>خطا در تأیید ورود!</b>\n\n${
+              result.message ||
+              "درخواست ورود نامعتبر است یا مهلت زمانی آن به پایان رسیده است. لطفاً مجدداً از وب‌سایت تلاش کنید."
+            }`,
+            { parse_mode: "HTML" }
+          );
+        }
+      } catch (err) {
+        console.error("Telegram auth error:", err);
+        await ctx.reply(
+          "❌ خطا در برقراری ارتباط با سرور برای تأیید ورود به سایت. لطفاً بعداً دوباره امتحان کنید."
+        );
+      }
+      return;
+    }
+
     if (ctx.match?.startsWith("q_")) {
       const query = Buffer.from(ctx.match.substring(2), "base64url").toString(
         "utf8"
