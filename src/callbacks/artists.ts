@@ -28,6 +28,7 @@ export function registerArtistCallbacks(bot: Bot) {
 
       console.log("songs ", songs.length);
       const artist = getArtistById(artistId);
+      console.log("artist ", artist);
       const artistName = artist?.name || "هنرمند";
       const artistNameEn = artist?.nameEn || "artist";
 
@@ -84,7 +85,7 @@ export function registerArtistCallbacks(bot: Bot) {
           },
         });
       } else {
-        await ctx.reply(`🎤 ${artistName}\n\n`, {
+        await ctx.reply(`🎤 آهنگ های ${artistName}(${songs.length} آهنگ)\n\n`, {
           reply_markup: {
             inline_keyboard: [
               [{ text: `🎤 ${artistName}`, callback_data: `a:${artistId}:0` }],
