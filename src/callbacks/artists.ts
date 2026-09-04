@@ -72,7 +72,7 @@ export function registerArtistCallbacks(bot: Bot) {
 
       if (artist?.telegram?.fileId) {
         await ctx.replyWithPhoto(artist?.telegram?.fileId || "", {
-          caption: `🎤 ${artistName}\n\n`,
+          caption: `🎤 آهنگ های ${artistName}(${songs.length} آهنگ)\n\n`,
           reply_markup: {
             inline_keyboard: [
               [{ text: `🎤 ${artistName}`, callback_data: `a:${artistId}:0` }],
