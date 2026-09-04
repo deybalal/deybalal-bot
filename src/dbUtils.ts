@@ -584,7 +584,9 @@ export function getUnpostedSongs(): TelegramSongWithFiles[] {
   }));
 }
 
-export function addArtist(artist: Artist) {
+export function addArtist(
+  artist: Artist & { telegram?: { fileId: string; fileUniqueId: string } }
+) {
   const addArtistStmt = db.prepare(`
 INSERT OR REPLACE INTO artists (
     id,

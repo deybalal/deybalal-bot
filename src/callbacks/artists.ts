@@ -28,7 +28,7 @@ export function registerArtistCallbacks(bot: Bot) {
 
       console.log("songs ", songs.length);
       const artist = getArtistById(artistId);
-      console.log("artist ", artist);
+
       const artistName = artist?.name || "هنرمند";
       const artistNameEn = artist?.nameEn || "artist";
 
@@ -71,8 +71,8 @@ export function registerArtistCallbacks(bot: Bot) {
         },
       ];
 
-      if (artist?.telegram?.fileId) {
-        await ctx.replyWithPhoto(artist?.telegram?.fileId || "", {
+      if (artist?.telegramFileId) {
+        await ctx.replyWithPhoto(artist?.telegramFileId || "", {
           caption: `🎤 آهنگ های ${artistName}(${songs.length} آهنگ)\n\n`,
           reply_markup: {
             inline_keyboard: [

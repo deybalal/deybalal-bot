@@ -166,11 +166,8 @@ export interface Artist {
   description?: string;
 
   followers: number;
-
-  telegram?: {
-    fileId: string;
-    fileUniqueId: string;
-  };
+  telegramFileId?: string;
+  telegramFileUniqueId?: string;
 }
 
 export interface VideoJob {

@@ -164,8 +164,8 @@ export function registerStartCommand(bot: Bot) {
         },
       ];
 
-      if (artist?.telegram?.fileId) {
-        await ctx.replyWithPhoto(artist?.telegram?.fileId || "", {
+      if (artist?.telegramFileId) {
+        await ctx.replyWithPhoto(artist?.telegramFileId || "", {
           reply_markup: {
             inline_keyboard: [
               [{ text: `🎤 ${artistName}`, callback_data: `a:${artistId}:0` }],
