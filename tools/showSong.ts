@@ -41,9 +41,9 @@ ${isSongInFavorites ? "✅ این آهنگ در لیست علاقه‌مندی�
   const parsedArtists = JSON.parse(song.artists as unknown as string);
 
   const kb = new InlineKeyboard();
-  kb.text("دانلود 64", `d:${song.id}:64`);
-  kb.text("دانلود 128", `d:${song.id}:128`);
-  kb.text("دانلود 320", `d:${song.id}:320`).row();
+  kb.text("دانلود 64", `d:${song.id}:64`).style("danger");
+  kb.text("دانلود 128", `d:${song.id}:128`).style("primary");
+  kb.text("دانلود 320", `d:${song.id}:320`).style("success").row();
   kb.text("🎧 پیش‌نمایش", `p:${song.id}`).row();
   kb.text("🎬 ساخت ویدیو", `lv:${song.id}`).row();
   if (isSongInFavorites) {
