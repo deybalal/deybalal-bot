@@ -5,6 +5,7 @@ import { identifyAudio } from "../src/fingerprints";
 import fs from "fs";
 import { downloadTelegramFile } from "./downloadTelegramFile";
 import { escapeHtml } from "./escapeHtml";
+import { getSongById } from "../src/dbUtils";
 
 export async function handleVoiceIdentification(ctx: Context) {
   const voice = ctx.message?.voice;
@@ -99,8 +100,9 @@ export async function handleVoiceIdentification(ctx: Context) {
       .deleteMessage(ctx.chat!.id, processingMessage.message_id)
       .catch(() => {});
 
-    if (song.coverArt) {
-      await ctx.replyWithPhoto(song.coverArt, {
+    const getSong = getSongById(song.id);
+    if (getSong?.telegram?.coverArt?.fileId) {
+      await ctx.replyWithPhoto(getSong.telegram.coverArt.fileId, {
         caption,
         parse_mode: "HTML",
         reply_markup: { inline_keyboard: keyboard },
