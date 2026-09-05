@@ -114,7 +114,7 @@ export async function extractFingerprints(
     "dejavu_fingerprint.py"
   );
 
-  const pythonCmd = process.env.PYTHON_PATH || "python";
+  const pythonCmd = process.env.PYTHON_PATH || "python3";
 
   const { stdout } = await execFileAsync(
     pythonCmd,
