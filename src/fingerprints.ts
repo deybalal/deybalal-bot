@@ -118,7 +118,7 @@ export async function extractFingerprints(
 
   const { stdout } = await execFileAsync(
     pythonCmd,
-    [pythonScriptPath, "--stdin", "--duration", String(duration)],
+    [pythonScriptPath, audioPath, "--duration", String(duration)],
     {
       maxBuffer: 20 * 1024 * 1024,
     }
