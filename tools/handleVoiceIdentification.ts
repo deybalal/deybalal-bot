@@ -51,20 +51,17 @@ export async function handleVoiceIdentification(ctx: Context) {
       `🎶 <b>${escapeHtml(song.title)}</b>\n` +
       `🎤 ${escapeHtml(song.artist)}`;
 
-    if (song.titleEn) {
-      caption += `\n\n<b>${escapeHtml(song.titleEn)}</b>`;
-    }
-
-    if (song.artistEn) {
-      caption += `\n${escapeHtml(song.artistEn)}`;
-    }
-
     caption +=
       `\n\n${confidenceEmoji} دقت تشخیص: <b>${result.confidence}%</b>` +
       `\n🔗 تطبیق اثر انگشت: <b>${result.stats?.matchedPeaks ?? 0}</b>`;
 
-    // Build inline keyboard: primary match + other candidates (excluding the match itself)
     const keyboard: { text: string; callback_data: string }[][] = [];
+    keyboard.push([
+      { text: "نمایش آهنگ", callback_data: `s:${result.song.id}` },
+    ]);
+    keyboard.push([
+      { text: "پیشنمایش (30S)", callback_data: `p:${result.song.id}` },
+    ]);
 
     const alternatives = result.candidates
       .filter((c) => c.song.id !== song.id)

@@ -46,6 +46,7 @@ import { identifyAudio, type FingerprintResult } from "./fingerprints.js";
 import { downloadTelegramFile } from "../tools/downloadTelegramFile.js";
 import { escapeHtml } from "../tools/escapeHtml.js";
 import { handleVoiceIdentification } from "../tools/handleVoiceIdentification.js";
+import { registerIdentifyCallback } from "./callbacks/identify.js";
 
 const app = new Hono();
 
@@ -86,6 +87,7 @@ export function registerCallbacks(bot: Bot) {
   registerUtilityCallbacks(bot);
   registerHelpCallback(bot);
   registerRandomLyricCallbacks(bot);
+  registerIdentifyCallback(bot);
 }
 
 registerCallbacks(bot);
