@@ -39,6 +39,12 @@ import { registerRandomLyricCallbacks } from "./callbacks/randomLyric";
 import { timeout } from "hono/timeout";
 import { sendErrorMessages } from "../tools/sendErrorMessages";
 
+import fs from "fs";
+import os from "os";
+import path from "path";
+import { identifyAudio, type FingerprintResult } from "./fingerprints.js";
+import { downloadTelegramFile } from "../tools/downloadTelegramFile.js";
+
 const app = new Hono();
 
 app.use(logger());
@@ -205,6 +211,105 @@ bot.on("message:text", async (ctx) => {
   }
 
   await sendSearchResults(ctx, text, 0, results);
+});
+
+bot.on("message:voice", async (ctx) => {
+  console.log("Voice message received");
+
+  // Ignore old Telegram updates
+  if (ctx.message.date + 120 < Math.ceil(Date.now() / 1000)) {
+    console.error("Expired voice message!");
+    return;
+  }
+
+  ensureUser(ctx.from!);
+
+  const voice = ctx.message.voice;
+
+  if (!voice) return;
+
+  // Telegram voice messages are normally OGG/Opus
+  const tempDir = os.tmpdir();
+
+  const tempFile = path.join(
+    tempDir,
+    `telegram_voice_${ctx.chat.id}_${ctx.message.message_id}_${Date.now()}.ogg`
+  );
+
+  try {
+    const processingMessage = await ctx.reply("🎵 در حال شناسایی آهنگ...");
+
+    // Get Telegram file information
+    const file = await ctx.getFile();
+
+    if (!file.file_id) {
+      throw new Error("Telegram did not return a file ID");
+    }
+
+    await downloadTelegramFile(ctx.api, file.file_id, tempFile);
+
+    console.log(`Voice downloaded: ${tempFile} (${voice.duration}s)`);
+
+    // Run Dejavu
+    const result = await identifyAudio(tempFile);
+
+    console.log("Fingerprint result:", result);
+
+    if (!result.match || !result.song) {
+      await ctx.reply(
+        "❌ متأسفانه نتونستم آهنگ رو شناسایی کنم.\n\n" +
+          "لطفاً یک قسمت واضح‌تر از آهنگ، ترجیحاً با صدای موسیقی بیشتر ارسال کنید."
+      );
+
+      return;
+    }
+
+    const song = result.song;
+
+    const confidenceEmoji =
+      result.confidence >= 70 ? "🟢" : result.confidence >= 40 ? "🟡" : "🟠";
+
+    let message =
+      `🎵 <b>آهنگ شناسایی شد!</b>\n\n` +
+      `🎶 <b>${escapeHtml(song.title)}</b>\n` +
+      `🎤 ${escapeHtml(song.artist)}`;
+
+    if (song.titleEn) {
+      message += `\n\n<b>${escapeHtml(song.titleEn)}</b>`;
+    }
+
+    if (song.artistEn) {
+      message += `\n${escapeHtml(song.artistEn)}`;
+    }
+
+    message +=
+      `\n\n${confidenceEmoji} دقت تشخیص: <b>${result.confidence}%</b>` +
+      `\n🔗 تطبیق اثر انگشت: <b>${result.stats?.matchedPeaks ?? 0}</b>`;
+
+    await ctx.api.editMessageText(
+      ctx.chat.id,
+      processingMessage.message_id,
+      message,
+      {
+        parse_mode: "HTML",
+      }
+    );
+  } catch (error) {
+    console.error("Voice identification error:", error);
+
+    await ctx.reply(
+      "❌ هنگام شناسایی آهنگ مشکلی پیش آمد. لطفاً دوباره تلاش کنید."
+    );
+  } finally {
+    // Always remove temporary audio
+    try {
+      if (fs.existsSync(tempFile)) {
+        await fs.promises.unlink(tempFile);
+      }
+    } catch (cleanupError) {
+      console.error("Failed to remove temporary voice file:", cleanupError);
+    }
+  }
 });
 
 app.post(`/firsttempwebhook`, async (c) => {

@@ -4,7 +4,7 @@ import path from "path";
 import { mkdir } from "fs/promises";
 import { getState, setState, clearState } from "./state";
 import { parseTimeRange, formatMs } from "./timeParser";
-import { createJobDir, cleanupJobDir, downloadTelegramFile } from "./utils";
+import { createJobDir, cleanupJobDir } from "./utils";
 import {
   cropAudio,
   buildSlideshow,
@@ -16,6 +16,7 @@ import { getSongById } from "../dbUtils";
 import type { LyricVideoState } from "../../types/types";
 import { removeFromQueue, isQueued } from "./queue/videoQueue";
 import bot from "..";
+import { downloadTelegramFile } from "../../tools/downloadTelegramFile";
 
 const mediaGroupBuffers = new Map<
   string,
