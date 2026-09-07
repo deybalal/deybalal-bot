@@ -47,6 +47,7 @@ import { downloadTelegramFile } from "../tools/downloadTelegramFile.js";
 import { escapeHtml } from "../tools/escapeHtml.js";
 import { handleVoiceIdentification } from "../tools/handleVoiceIdentification.js";
 import { registerIdentifyCallback } from "./callbacks/identify.js";
+import { cors } from "hono/cors";
 
 const app = new Hono();
 
@@ -333,6 +334,143 @@ app.post("/bkUp09trxWhy41Not31", async (c) => {
       },
       500
     );
+  }
+});
+
+app.use(
+  "/identify",
+  cors({
+    origin: "*",
+    allowMethods: ["POST", "OPTIONS"],
+    allowHeaders: ["Content-Type", "Authorization"],
+  })
+);
+
+// API route to identify audio from Next.js or other clients
+app.post("/identify", async (c) => {
+  const expectedPassword = process.env.IDENTIFY_PASSWORD;
+
+  if (expectedPassword) {
+    const authHeader = c.req
+      .header("authorization")
+      ?.replace(/^Bearer\s+/i, "");
+
+    if (authHeader !== expectedPassword) {
+      return c.json(
+        {
+          success: false,
+          error: "Unauthorized",
+        },
+        401
+      );
+    }
+  }
+
+  let tempFilePath: string | null = null;
+  try {
+    let audioBuffer: Buffer | null = null;
+    let extension = "wav";
+
+    const contentType = c.req.header("content-type") || "";
+
+    if (contentType.includes("multipart/form-data")) {
+      const formData = await c.req.formData();
+      let file = formData.get("file") || formData.get("audio");
+
+      const isFileOrBlob = (val: unknown): val is Blob =>
+        typeof val === "object" &&
+        val !== null &&
+        ((val as unknown) instanceof Blob ||
+          (typeof File !== "undefined" && (val as unknown) instanceof File));
+
+      if (!file) {
+        for (const value of formData.values()) {
+          if (isFileOrBlob(value)) {
+            file = value;
+            break;
+          }
+        }
+      }
+
+      if (isFileOrBlob(file)) {
+        const arrayBuffer = await file.arrayBuffer();
+        audioBuffer = Buffer.from(arrayBuffer);
+
+        const filename = (file as { name?: string }).name || "";
+        const detectedExt = path
+          .extname(filename)
+          .toLowerCase()
+          .replace(/^\./, "");
+
+        if (detectedExt) {
+          extension = detectedExt;
+        } else if (file.type?.includes("mp3") || file.type?.includes("mpeg")) {
+          extension = "mp3";
+        } else if (file.type?.includes("ogg")) {
+          extension = "ogg";
+        } else if (file.type?.includes("wav")) {
+          extension = "wav";
+        } else if (file.type?.includes("m4a") || file.type?.includes("mp4")) {
+          extension = "m4a";
+        } else if (file.type?.includes("webm")) {
+          extension = "webm";
+        } else if (file.type?.includes("flac")) {
+          extension = "flac";
+        }
+      }
+    } else {
+      const arrayBuffer = await c.req.arrayBuffer();
+      if (arrayBuffer && arrayBuffer.byteLength > 0) {
+        audioBuffer = Buffer.from(arrayBuffer);
+      }
+    }
+
+    if (!audioBuffer || audioBuffer.length === 0) {
+      return c.json(
+        {
+          success: false,
+          error: "No audio data provided",
+        },
+        400
+      );
+    }
+
+    // Save temporary audio file for fingerprint extraction
+    const tempDir = os.tmpdir();
+    tempFilePath = path.join(
+      tempDir,
+      `identify_${Date.now()}_${Math.random()
+        .toString(36)
+        .substring(7)}.${extension}`
+    );
+
+    await fs.promises.writeFile(tempFilePath, audioBuffer);
+
+    // Run music identification using the bot's fingerprinting engine
+    const result = await identifyAudio(tempFilePath);
+
+    return c.json({
+      success: true,
+      ...result,
+    });
+  } catch (err) {
+    return c.json(
+      {
+        success: false,
+        message: (err as Error).message,
+      },
+      500
+    );
+  } finally {
+    if (tempFilePath) {
+      try {
+        if (fs.existsSync(tempFilePath)) {
+          await fs.promises.unlink(tempFilePath);
+        }
+      } catch {
+        // Ignore cleanup errors
+      }
+    }
   }
 });
 

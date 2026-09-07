@@ -5,6 +5,8 @@ export function registerHelpCallback(bot: Bot) {
   bot.callbackQuery("help", async (ctx) => {
     const text = helpText;
 
+    await ctx.answerCallbackQuery();
+
     const keyboard = new InlineKeyboard()
       .text("🔍 جستجو", "search_prompt")
       .switchInlineCurrent("🔍 جستجو اینلاین", "")
