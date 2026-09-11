@@ -64,7 +64,7 @@ function formatDurationSec(sec = 0): string {
   return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
 }
 
-function wrapLine(text: string, maxWords = 6): string {
+function wrapLine(text: string, maxWords = 5): string {
   const words = text.trim().split(/\s+/);
   if (words.length <= maxWords) return text;
   const lines: string[] = [];
@@ -78,8 +78,8 @@ function wrapLine(text: string, maxWords = 6): string {
  * Builds the complete ASS subtitle content for 9:16 portrait story videos.
  * Features:
  * - PlayResX: 1080, PlayResY: 1920 (Matching Next.js Canvas 1:1)
- * - Typography with Vazirmatn / Tahoma / Arial fallback for Persian RTL
- * - Dynamic Synced Lyrics inside the Lyrics Box (active line at 810, upcoming at 930)
+ * - Typography with Vazirmatn for Persian RTL
+ * - Dynamic Synced Lyrics inside the Lyrics Box (active single line centered at 850)
  * - Permanent card overlays for Title, Artist, Branding, Timestamps
  */
 export function buildStoryASSContent(
@@ -103,15 +103,15 @@ ScaledBorderAndShadow: yes
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: StoryActive,${fontName},66,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,3,3,5,60,60,0,1
-Style: CardTitle,${fontName},42,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,1.8,1.8,6,40,40,0,1
-Style: CardArtist,${fontName},32,&H40FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,1.5,1.5,6,40,40,0,1
-Style: CardBadge,${fontName},36,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,1.8,1.8,6,40,40,0,1
-Style: CardUrl,${fontName},28,&H33FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,1.5,1.5,4,40,40,0,1
-Style: CardQuote,${fontName},96,&H5994EC,&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,0,0,6,40,40,0,1
-Style: CardTimeLeft,${fontName},32,&H40FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,1.5,1.5,4,40,40,0,1
-Style: CardTimeRight,${fontName},32,&H40FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,1.5,1.5,6,40,40,0,1
-Style: CardWatermark,${fontName},40,&H40FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,1.8,1.8,5,40,40,0,1
+Style: StoryActive,${fontName},96,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,3.8,3.8,5,60,60,0,1
+Style: CardTitle,${fontName},64,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,2.5,2.5,6,40,40,0,1
+Style: CardArtist,${fontName},44,&H40FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,2,2,6,40,40,0,1
+Style: CardBadge,${fontName},52,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,2.2,2.2,6,40,40,0,1
+Style: CardUrl,${fontName},40,&H33FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,1.8,1.8,4,40,40,0,1
+Style: CardQuote,${fontName},140,&H5994EC,&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,0,0,6,40,40,0,1
+Style: CardTimeLeft,${fontName},48,&H40FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,2,2,4,40,40,0,1
+Style: CardTimeRight,${fontName},48,&H40FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,2,2,6,40,40,0,1
+Style: CardWatermark,${fontName},58,&H40FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,2.2,2.2,5,40,40,0,1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text`;
@@ -131,36 +131,36 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text`
 
     // Top Header Badge ("دی بلال" & "deybalal.ir")
     dialogueLines.push(
-      `Dialogue: 0,0:00:00.00,${endTimeStr},CardBadge,,0,0,0,,{\\pos(720,156)}دی بلال`
+      `Dialogue: 0,0:00:00.00,${endTimeStr},CardBadge,,0,0,0,,{\\pos(740,156)}دی بلال`
     );
     dialogueLines.push(
-      `Dialogue: 0,0:00:00.00,${endTimeStr},CardUrl,,0,0,0,,{\\pos(410,157)}deybalal.ir`
+      `Dialogue: 0,0:00:00.00,${endTimeStr},CardUrl,,0,0,0,,{\\pos(380,157)}deybalal.ir`
     );
 
     // Mini Song Pill: Title & Artist
     dialogueLines.push(
-      `Dialogue: 0,0:00:00.00,${endTimeStr},CardTitle,,0,0,0,,{\\pos(790,280)}${cleanTitle}`
+      `Dialogue: 0,0:00:00.00,${endTimeStr},CardTitle,,0,0,0,,{\\pos(790,272)}${cleanTitle}`
     );
     dialogueLines.push(
-      `Dialogue: 0,0:00:00.00,${endTimeStr},CardArtist,,0,0,0,,{\\pos(790,326)}${cleanArtist}`
+      `Dialogue: 0,0:00:00.00,${endTimeStr},CardArtist,,0,0,0,,{\\pos(790,328)}${cleanArtist}`
     );
 
     // Pink quotation mark inside the Lyrics Box
     dialogueLines.push(
-      `Dialogue: 0,0:00:00.00,${endTimeStr},CardQuote,,0,0,0,,{\\pos(960,490)}“`
+      `Dialogue: 0,0:00:00.00,${endTimeStr},CardQuote,,0,0,0,,{\\pos(950,500)}“`
     );
 
     // Timestamps below Progress Bar
     dialogueLines.push(
-      `Dialogue: 0,0:00:00.00,${endTimeStr},CardTimeLeft,,0,0,0,,{\\pos(170,1382)}${startProgressStr}`
+      `Dialogue: 0,0:00:00.00,${endTimeStr},CardTimeLeft,,0,0,0,,{\\pos(170,1395)}${startProgressStr}`
     );
     dialogueLines.push(
-      `Dialogue: 0,0:00:00.00,${endTimeStr},CardTimeRight,,0,0,0,,{\\pos(910,1382)}${totalDurationStr}`
+      `Dialogue: 0,0:00:00.00,${endTimeStr},CardTimeRight,,0,0,0,,{\\pos(910,1395)}${totalDurationStr}`
     );
 
     // Footer Branding
     dialogueLines.push(
-      `Dialogue: 0,0:00:00.00,${endTimeStr},CardWatermark,,0,0,0,,{\\pos(540,1600)}@deybalalir`
+      `Dialogue: 0,0:00:00.00,${endTimeStr},CardWatermark,,0,0,0,,{\\pos(540,1610)}@deybalalir`
     );
   }
 
