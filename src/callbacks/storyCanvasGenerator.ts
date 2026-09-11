@@ -14,7 +14,7 @@ interface SongData {
 /**
  * Runs FFmpeg safely in either Bun or Node.js environment
  */
-async function runFFmpegCmd(args: string[]): Promise<boolean> {
+export async function runFFmpegCmd(args: string[]): Promise<boolean> {
   try {
     if (typeof (globalThis as any).Bun !== "undefined") {
       const proc = (globalThis as any).Bun.spawn(["ffmpeg", "-y", ...args], {
@@ -267,8 +267,7 @@ export async function createStoryCardInBot(
 
   // 4. Fallback: Pure FFmpeg Story Card with stylish dark indigo/slate background
   const fallbackFilter =
-    `color=c=0x0f172a:s=${width}x${height}:d=1[bg];` +
-    `[bg]drawbox=x=${isPortrait ? 160 : 150}:y=${isPortrait ? 380 : 190}:w=${
+    `drawbox=x=${isPortrait ? 160 : 150}:y=${isPortrait ? 380 : 190}:w=${
       isPortrait ? 760 : 700
     }:h=${isPortrait ? 760 : 700}:color=white@0.08:t=fill,` +
     `drawbox=x=${isPortrait ? 160 : 920}:y=${isPortrait ? 1220 : 600}:w=${
@@ -276,20 +275,15 @@ export async function createStoryCardInBot(
     }:h=6:color=white@0.3:t=fill,` +
     `drawbox=x=${isPortrait ? 160 : 920}:y=${isPortrait ? 1220 : 600}:w=${
       isPortrait ? 280 : 300
-    }:h=6:color=white@0.9:t=fill,` +
-    `drawtext=text='@deybalalir':fontcolor=white@0.7:fontsize=32:x=${
-      isPortrait ? "(w-text_w)/2" : "920"
-    }:y=${isPortrait ? 1600 : 720}[out]`;
+    }:h=6:color=white@0.9:t=fill`;
 
   await runFFmpegCmd([
     "-f",
     "lavfi",
     "-i",
     `color=c=0x0f172a:s=${width}x${height}:d=1`,
-    "-filter_complex",
+    "-vf",
     fallbackFilter,
-    "-map",
-    "[out]",
     "-frames:v",
     "1",
     outputImagePath,

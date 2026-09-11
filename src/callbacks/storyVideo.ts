@@ -20,7 +20,7 @@ import { cleanupJobDir, createJobDir } from "../lyricVideo/utils";
 import { generateASSFile } from "../lyricVideo/assGenerator";
 import { formatMs } from "../lyricVideo/timeParser";
 import { generateSimpleASSFile } from "../lyricVideo/simpleAssGenerator";
-import { createStoryCardInBot } from "./storyCanvasGenerator";
+import { createStoryCardInBot, runFFmpegCmd } from "./storyCanvasGenerator";
 import { getSongById } from "../dbUtils";
 import { downloadTelegramFile } from "../../tools/downloadTelegramFile";
 
@@ -239,6 +239,71 @@ async function prepareSongCoverImage(
 }
 
 /**
+ * Ultra-fast single-pass video renderer for Story Cards.
+ * Encodes image + audio + subtitles directly into the final MP4 in ~2-3 seconds,
+ * eliminating the slow multi-pass slideshow and zoompan bottlenecks.
+ */
+async function renderSingleCardVideo(
+  imagePath: string,
+  audioPath: string,
+  outputPath: string,
+  assPath: string | null,
+  resolution: "big" | "small" = "small"
+): Promise<void> {
+  const width = resolution === "big" ? 1920 : 1080;
+  const height = resolution === "big" ? 1080 : 1920;
+
+  const watermark =
+    "drawtext=text='@deybalalir':" +
+    "fontcolor=white@0.75:" +
+    "fontsize=42:" +
+    "x=(w-text_w)/2:" +
+    "y=100:" +
+    "borderw=2:" +
+    "bordercolor=black@0.6";
+
+  const filters: string[] = [
+    `scale=${width}:${height}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1`,
+  ];
+  if (assPath) {
+    filters.push(`ass='${assPath.replace(/\\/g, "/").replace(/:/g, "\\:")}'`);
+  }
+  filters.push(watermark);
+
+  const filterStr = filters.join(",");
+
+  const args: string[] = [
+    "-loop",
+    "1",
+    "-i",
+    imagePath,
+    "-i",
+    audioPath,
+    "-vf",
+    filterStr,
+    "-c:v",
+    "libx264",
+    "-preset",
+    "veryfast",
+    "-crf",
+    "23",
+    "-pix_fmt",
+    "yuv420p",
+    "-c:a",
+    "aac",
+    "-b:a",
+    "192k",
+    "-shortest",
+    outputPath,
+  ];
+
+  const success = await runFFmpegCmd(args);
+  if (!success) {
+    throw new Error("FFmpeg single-pass story video render failed");
+  }
+}
+
+/**
  * Executes rendering specifically for Story Video clips.
  */
 export async function executeStoryRendering(
@@ -282,21 +347,6 @@ export async function executeStoryRendering(
     );
     await cropAudio(rawAudioPath, audioPath, state.startMs, state.endMs);
 
-    await updateStoryProgress(
-      bot,
-      chatId,
-      state.progressMessageId,
-      "🎞 درحال ساخت اسلایدشو تصویر..."
-    );
-    const durationMs = state.endMs - state.startMs;
-    await buildSlideshow(
-      state.images,
-      slideshowPath,
-      durationMs,
-      jobDir,
-      state.resolution ?? "small"
-    );
-
     // Generate Subtitles (ASS) based on selected lyrics type
     let assPath: string | null = null;
     if (state.lyricsType === "synced" && song.syncedLyrics) {
@@ -328,19 +378,53 @@ export async function executeStoryRendering(
       );
     }
 
-    await updateStoryProgress(
-      bot,
-      chatId,
-      state.progressMessageId,
-      "🎬 درحال رندر و فشرده‌سازی ویدیوی نهایی..."
-    );
-    await renderFinal(
-      slideshowPath,
-      audioPath,
-      outputPath,
-      assPath,
-      state.resolution ?? "small"
-    );
+    // Render Video
+    if (state.images.length === 1) {
+      // Ultra-fast single-pass render (2-3 seconds)
+      await updateStoryProgress(
+        bot,
+        chatId,
+        state.progressMessageId,
+        "🎬 درحال ساخت و رندر سریع ویدیوی استوری..."
+      );
+      await renderSingleCardVideo(
+        state.images[0]!,
+        audioPath,
+        outputPath,
+        assPath,
+        state.resolution ?? "small"
+      );
+    } else {
+      // Multi-image custom photos path
+      await updateStoryProgress(
+        bot,
+        chatId,
+        state.progressMessageId,
+        "🎞 درحال ساخت اسلایدشو تصاویر..."
+      );
+      const durationMs = state.endMs - state.startMs;
+      await buildSlideshow(
+        state.images,
+        slideshowPath,
+        durationMs,
+        jobDir,
+        state.resolution ?? "small"
+      );
+
+      await updateStoryProgress(
+        bot,
+        chatId,
+        state.progressMessageId,
+        "🎬 درحال رندر و فشرده‌سازی ویدیوی نهایی..."
+      );
+      await renderFinal(
+        slideshowPath,
+        audioPath,
+        outputPath,
+        assPath,
+        state.resolution ?? "small"
+      );
+    }
 
     await updateStoryProgress(
       bot,
