@@ -11,64 +11,29 @@ import {
 } from "../storyVideo/storyFfmpeg";
 
 import {
-  enqueue,
-  getQueueLength,
-  removeFromQueue,
-  isQueued,
-} from "../lyricVideo/queue/videoQueue";
-import { getState, setState, clearState, isBusy } from "../lyricVideo/state";
-import { cleanupJobDir, createJobDir } from "../lyricVideo/utils";
-import { formatMs } from "../lyricVideo/timeParser";
-import { getSongById } from "../dbUtils";
-import { downloadTelegramFile } from "../../tools/downloadTelegramFile";
+  enqueueStory,
+  getStoryQueueLength,
+  removeFromStoryQueue,
+  isStoryQueued,
+} from "../storyVideo/storyQueue";
+import {
+  getStoryState,
+  setStoryState,
+  clearStoryState,
+  isStoryBusy,
+  type StoryLyricsType,
+  type StoryVideoState,
+} from "../storyVideo/storyState";
+import {
+  createStoryJobDir,
+  cleanupStoryJobDir,
+  formatMs,
+} from "../storyVideo/storyUtils";
 import { generateStoryASSFile } from "../storyVideo/storyAssGenerator";
 import { generateSimpleASSFile } from "../storyVideo/simpleAssGenerator";
 import { createStoryCardInBot } from "../storyVideo/storyCanvasGenerator";
-
-export type StoryLyricsType = "synced" | "simple";
-
-export interface StoryVideoState {
-  songId: string;
-  jobDir: string;
-  images: string[];
-  step:
-    | "waiting_source"
-    | "waiting_images"
-    | "waiting_resolution"
-    | "rendering";
-  startMs: number;
-  endMs: number;
-  lyricsType: StoryLyricsType;
-  resolution?: "big" | "small";
-  progressMessageId?: number;
-}
-
-// Separate state store for story video sessions
-const storyStates = new Map<number, StoryVideoState>();
-
-export function getStoryState(userId: number): StoryVideoState | undefined {
-  return storyStates.get(userId);
-}
-
-export function setStoryState(userId: number, state: StoryVideoState): void {
-  storyStates.set(userId, state);
-  // Also synchronize with main LyricVideoState for isBusy & lifecycle compatibility
-  setState(userId, {
-    songId: state.songId,
-    images: state.images,
-    jobDir: state.jobDir,
-    step: state.step as any,
-    startMs: state.startMs,
-    endMs: state.endMs,
-    resolution: state.resolution,
-    progressMessageId: state.progressMessageId,
-  });
-}
-
-export function clearStoryState(userId: number): void {
-  storyStates.delete(userId);
-  clearState(userId);
-}
+import { getSongById } from "../dbUtils";
+import { downloadTelegramFile } from "../../tools/downloadTelegramFile";
 
 async function updateStoryProgress(
   bot: Bot,
@@ -154,7 +119,7 @@ export async function handleStoryVideoStart(
     return;
   }
 
-  if (isBusy(userId)) {
+  if (isStoryBusy(userId)) {
     await ctx.reply(
       "⏳ شما در حال حاضر یک ویدیوی در حال پردازش دارید. لطفاً تا اتمام ساخت آن صبر کنید."
     );
@@ -173,7 +138,7 @@ export async function handleStoryVideoStart(
   const endMs = clampedEndSec * 1000;
   const durationSec = clampedEndSec - clampedStartSec;
 
-  const jobDir = await createJobDir();
+  const jobDir = await createStoryJobDir();
 
   const state: StoryVideoState = {
     songId,
@@ -321,7 +286,25 @@ export async function executeStoryRendering(
         jobDir,
         state.startMs,
         state.endMs,
-        state.resolution ?? "small"
+        state.resolution ?? "small",
+        {
+          title: song.title,
+          artist: song.artist,
+          duration: song.duration,
+        }
+      );
+    } else {
+      // Fallback: Generate card UI overlay so title, artist, timestamps & badge are always present
+      assPath = await generateStoryASSFile(
+        "",
+        jobDir,
+        state.startMs,
+        state.endMs,
+        {
+          title: song.title,
+          artist: song.artist,
+          duration: song.duration,
+        }
       );
     }
 
@@ -383,7 +366,7 @@ export async function executeStoryRendering(
     const thumbPath = path.join(jobDir, "thumb.jpg");
     await generateStoryThumbnail(outputPath, thumbPath);
 
-    const durationSecTwo = Math.round((state.endMs - state.startMs) / 1000);
+    const finalDurationSec = Math.round((state.endMs - state.startMs) / 1000);
     const lyricsNote =
       state.lyricsType === "synced" ? "✨ متن همگام‌سازی شده" : "📝 متن ترانه";
 
@@ -392,7 +375,7 @@ export async function executeStoryRendering(
         `🎬 <b>${song.title}</b> — ${song.artist}\n` +
         `⏱ بازه: <code>${formatMs(state.startMs)}</code> تا <code>${formatMs(
           state.endMs
-        )}</code> (${durationSecTwo} ثانیه)\n` +
+        )}</code> (${finalDurationSec} ثانیه)\n` +
         `${lyricsNote}\n\n` +
         `🎵 پلتفرم موسیقی لری دی‌بلال\n@deybalalir`,
       parse_mode: "HTML",
@@ -413,11 +396,11 @@ export async function executeStoryRendering(
         .catch(() => {});
     }
 
-    await cleanupJobDir(jobDir);
+    await cleanupStoryJobDir(jobDir);
     clearStoryState(userId);
   } catch (err) {
     console.error("Story video rendering error:", err);
-    await cleanupJobDir(jobDir);
+    await cleanupStoryJobDir(jobDir);
     clearStoryState(userId);
 
     const errorMsg = (err as Error).message || "خطای ناشناخته";
@@ -461,15 +444,6 @@ export function registerStoryVideoCallbacks(bot: Bot): void {
 
       await ctx.deleteMessage().catch(() => {});
 
-      const position = await enqueue({
-        userId,
-        chatId: ctx.chat!.id,
-        songId: state.songId,
-        title: song?.title || "",
-        resolve: () => {},
-        reject: () => {},
-      });
-
       const resLabel =
         resolution === "small"
           ? "📱 عمودی استوری (1080x1920)"
@@ -478,21 +452,41 @@ export function registerStoryVideoCallbacks(bot: Bot): void {
       const progress = await ctx.reply(
         `🎥 <b>شروع ساخت ویدیو</b>\n` +
           `رزولوشن: ${resLabel}\n` +
-          (position === 1
-            ? `⏳ درحال شروع پردازش فایل...`
-            : `⏳ موقعیت شما در صف: ${position} / ${getQueueLength()}`),
+          `⏳ درحال پردازش فایل...`,
         { parse_mode: "HTML" }
       );
 
       state.progressMessageId = progress.message_id;
       setStoryState(userId, state);
 
-      // Execute rendering for story video
-      void executeStoryRendering(ctx.chat!.id, userId, bot);
+      const position = await enqueueStory({
+        userId,
+        chatId: ctx.chat!.id,
+        songId: state.songId,
+        title: song?.title || "",
+        execute: async () => {
+          await executeStoryRendering(ctx.chat!.id, userId, bot);
+        },
+        resolve: () => {},
+        reject: () => {},
+      });
+
+      if (position > 1) {
+        await ctx.api
+          .editMessageText(
+            ctx.chat!.id,
+            progress.message_id,
+            `🎥 <b>شروع ساخت ویدیو</b>\n` +
+              `رزولوشن: ${resLabel}\n` +
+              `⏳ موقعیت شما در صف: ${position} / ${getStoryQueueLength()}`,
+            { parse_mode: "HTML" }
+          )
+          .catch(() => {});
+      }
     } catch (e) {
       console.error("Quick story initiation error:", e);
       await ctx.reply(`❌ خطا در شروع ساخت ویدیو: ${(e as Error).message}`);
-      await cleanupJobDir(state.jobDir);
+      await cleanupStoryJobDir(state.jobDir);
       clearStoryState(userId);
     }
   });
@@ -572,15 +566,6 @@ export function registerStoryVideoCallbacks(bot: Bot): void {
     await ctx.deleteMessage().catch(() => {});
 
     const song = getSongById(state.songId);
-    const position = await enqueue({
-      userId,
-      chatId: ctx.chat!.id,
-      songId: state.songId,
-      title: song?.title || "",
-      resolve: () => {},
-      reject: () => {},
-    });
-
     const resLabel =
       resolution === "small"
         ? "📱 عمودی استوری (1080x1920)"
@@ -589,16 +574,37 @@ export function registerStoryVideoCallbacks(bot: Bot): void {
     const progress = await ctx.reply(
       `🎥 <b>شروع ساخت ویدیو با ${state.images.length} تصویر انتخابی</b>\n` +
         `رزولوشن: ${resLabel}\n` +
-        (position === 1
-          ? `⏳ درحال شروع پردازش فایل...`
-          : `⏳ موقعیت شما در صف: ${position} / ${getQueueLength()}`),
+        `⏳ درحال پردازش فایل...`,
       { parse_mode: "HTML" }
     );
 
     state.progressMessageId = progress.message_id;
     setStoryState(userId, state);
 
-    void executeStoryRendering(ctx.chat!.id, userId, bot);
+    const position = await enqueueStory({
+      userId,
+      chatId: ctx.chat!.id,
+      songId: state.songId,
+      title: song?.title || "",
+      execute: async () => {
+        await executeStoryRendering(ctx.chat!.id, userId, bot);
+      },
+      resolve: () => {},
+      reject: () => {},
+    });
+
+    if (position > 1) {
+      await ctx.api
+        .editMessageText(
+          ctx.chat!.id,
+          progress.message_id,
+          `🎥 <b>شروع ساخت ویدیو با ${state.images.length} تصویر انتخابی</b>\n` +
+            `رزولوشن: ${resLabel}\n` +
+            `⏳ موقعیت شما در صف: ${position} / ${getStoryQueueLength()}`,
+          { parse_mode: "HTML" }
+        )
+        .catch(() => {});
+    }
   });
 
   // 4. Cancel
@@ -607,10 +613,10 @@ export function registerStoryVideoCallbacks(bot: Bot): void {
     const state = getStoryState(userId);
 
     if (state) {
-      if (isQueued(userId)) {
-        removeFromQueue(userId);
+      if (isStoryQueued(userId)) {
+        removeFromStoryQueue(userId);
       }
-      await cleanupJobDir(state.jobDir);
+      await cleanupStoryJobDir(state.jobDir);
       clearStoryState(userId);
     }
 

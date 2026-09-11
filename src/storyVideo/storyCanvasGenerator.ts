@@ -313,17 +313,6 @@ export async function createStoryCardInBot(
         ctx.fill();
       });
 
-      // Badge Text
-      ctx.fillStyle = "#ffffff";
-      ctx.font = "bold 30px Vazirmatn, Tahoma, Arial, sans-serif";
-      ctx.textAlign = "right";
-      ctx.textBaseline = "middle";
-      ctx.fillText("دی بلال", badgeX + badgeW - 36, headerY + 36);
-
-      ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
-      ctx.font = "normal 22px Vazirmatn, Tahoma, Arial, sans-serif";
-      ctx.textAlign = "left";
-      ctx.fillText("deybalal.ir", waveStartX + 66, headerY + 37);
       ctx.restore();
 
       if (isPortrait) {
@@ -357,17 +346,6 @@ export async function createStoryCardInBot(
           ctx.fill();
         }
 
-        // Mini title & artist
-        ctx.textAlign = "right";
-        ctx.fillStyle = "#ffffff";
-        ctx.font = "bold 34px Vazirmatn, Tahoma, Arial, sans-serif";
-        const cleanTitle = (song.title || "آهنگ لری").slice(0, 25);
-        ctx.fillText(cleanTitle, thumbX - 20, miniY + 44);
-
-        ctx.fillStyle = "rgba(255, 255, 255, 0.75)";
-        ctx.font = "normal 26px Vazirmatn, Tahoma, Arial, sans-serif";
-        const cleanArtist = (song.artist || "دی بلال").slice(0, 30);
-        ctx.fillText(cleanArtist, thumbX - 20, miniY + 82);
         ctx.restore();
 
         // --- 4. Prominent Lyrics Box (dynamic lyrics render here via ASS) ---
@@ -390,12 +368,6 @@ export async function createStoryCardInBot(
         ctx.strokeStyle = "rgba(255, 255, 255, 0.16)";
         ctx.lineWidth = 1.5;
         ctx.stroke();
-
-        // Pink quotation mark at top-right of the box
-        ctx.font = "italic 85px Georgia, serif";
-        ctx.fillStyle = "rgba(236, 72, 153, 0.35)";
-        ctx.textAlign = "right";
-        ctx.fillText("“", lyricsBoxX + lyricsBoxW - 40, lyricsBoxY + 90);
         ctx.restore();
 
         // --- 5. Player Controls & Progress Bar ---
@@ -429,19 +401,6 @@ export async function createStoryCardInBot(
         ctx.arc(barX + progressWidth, barY + barHeight / 2, 11, 0, Math.PI * 2);
         ctx.fillStyle = "#ffffff";
         ctx.fill();
-
-        // Timestamps
-        ctx.font = "bold 26px monospace, sans-serif";
-        ctx.fillStyle = "rgba(255, 255, 255, 0.75)";
-        ctx.textAlign = "left";
-        ctx.fillText(formatDurationSec(currentProgress), barX, barY + 38);
-
-        ctx.textAlign = "right";
-        ctx.fillText(
-          formatDurationSec(totalDuration),
-          barX + barWidth,
-          barY + 38
-        );
 
         // Player Buttons (Prev, Play Circle, Next, Heart)
         const btnY = barY + 95;
@@ -498,12 +457,6 @@ export async function createStoryCardInBot(
         ctx.lineTo(heartX, btnY + 12);
         ctx.closePath();
         ctx.fill();
-
-        // Footer Branding
-        ctx.font = "normal 32px Vazirmatn, Tahoma, Arial, sans-serif";
-        ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
-        ctx.textAlign = "center";
-        ctx.fillText("@deybalalir", width / 2, 1600);
         ctx.restore();
       }
 
