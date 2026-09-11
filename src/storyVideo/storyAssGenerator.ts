@@ -103,15 +103,15 @@ ScaledBorderAndShadow: yes
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: StoryActive,${fontName},54,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,2.5,3,5,80,80,0,1
-Style: CardTitle,${fontName},34,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,1.5,1.5,6,40,40,0,1
-Style: CardArtist,${fontName},26,&H40FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,1.5,1.5,6,40,40,0,1
-Style: CardBadge,${fontName},30,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,1.5,1.5,6,40,40,0,1
-Style: CardUrl,${fontName},22,&H33FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,1.2,1.2,4,40,40,0,1
-Style: CardQuote,${fontName},80,&H5994EC,&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,0,0,6,40,40,0,1
-Style: CardTimeLeft,${fontName},26,&H40FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,1.2,1.2,4,40,40,0,1
-Style: CardTimeRight,${fontName},26,&H40FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,1.2,1.2,6,40,40,0,1
-Style: CardWatermark,${fontName},32,&H40FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,1.5,1.5,5,40,40,0,1
+Style: StoryActive,${fontName},66,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,3,3,5,60,60,0,1
+Style: CardTitle,${fontName},42,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,1.8,1.8,6,40,40,0,1
+Style: CardArtist,${fontName},32,&H40FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,1.5,1.5,6,40,40,0,1
+Style: CardBadge,${fontName},36,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,1.8,1.8,6,40,40,0,1
+Style: CardUrl,${fontName},28,&H33FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,1.5,1.5,4,40,40,0,1
+Style: CardQuote,${fontName},96,&H5994EC,&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,0,0,6,40,40,0,1
+Style: CardTimeLeft,${fontName},32,&H40FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,1.5,1.5,4,40,40,0,1
+Style: CardTimeRight,${fontName},32,&H40FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,1.5,1.5,6,40,40,0,1
+Style: CardWatermark,${fontName},40,&H40FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,1.8,1.8,5,40,40,0,1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text`;
@@ -139,10 +139,10 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text`
 
     // Mini Song Pill: Title & Artist
     dialogueLines.push(
-      `Dialogue: 0,0:00:00.00,${endTimeStr},CardTitle,,0,0,0,,{\\pos(790,285)}${cleanTitle}`
+      `Dialogue: 0,0:00:00.00,${endTimeStr},CardTitle,,0,0,0,,{\\pos(790,280)}${cleanTitle}`
     );
     dialogueLines.push(
-      `Dialogue: 0,0:00:00.00,${endTimeStr},CardArtist,,0,0,0,,{\\pos(790,325)}${cleanArtist}`
+      `Dialogue: 0,0:00:00.00,${endTimeStr},CardArtist,,0,0,0,,{\\pos(790,326)}${cleanArtist}`
     );
 
     // Pink quotation mark inside the Lyrics Box
@@ -152,10 +152,10 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text`
 
     // Timestamps below Progress Bar
     dialogueLines.push(
-      `Dialogue: 0,0:00:00.00,${endTimeStr},CardTimeLeft,,0,0,0,,{\\pos(170,1378)}${startProgressStr}`
+      `Dialogue: 0,0:00:00.00,${endTimeStr},CardTimeLeft,,0,0,0,,{\\pos(170,1382)}${startProgressStr}`
     );
     dialogueLines.push(
-      `Dialogue: 0,0:00:00.00,${endTimeStr},CardTimeRight,,0,0,0,,{\\pos(910,1378)}${totalDurationStr}`
+      `Dialogue: 0,0:00:00.00,${endTimeStr},CardTimeRight,,0,0,0,,{\\pos(910,1382)}${totalDurationStr}`
     );
 
     // Footer Branding
