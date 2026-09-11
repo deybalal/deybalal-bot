@@ -20,16 +20,9 @@ import { cleanupJobDir, createJobDir } from "../lyricVideo/utils";
 import { generateASSFile } from "../lyricVideo/assGenerator";
 import { formatMs } from "../lyricVideo/timeParser";
 import { generateSimpleASSFile } from "../lyricVideo/simpleAssGenerator";
+import { createStoryCardInBot } from "./storyCanvasGenerator";
 import { getSongById } from "../dbUtils";
 import { downloadTelegramFile } from "../../tools/downloadTelegramFile";
-
-let botInstance: any;
-try {
-  const botModule = require("../../..");
-  botInstance = botModule.default || botModule.bot || botModule;
-} catch {
-  botInstance = null;
-}
 
 export type StoryLyricsType = "synced" | "simple";
 
@@ -77,13 +70,15 @@ export function clearStoryState(userId: number): void {
 }
 
 async function updateStoryProgress(
+  bot: Bot,
   chatId: number,
   messageId: number | undefined,
   text: string
 ): Promise<void> {
-  if (!messageId || !botInstance) return;
   try {
-    await botInstance.api.editMessageText(chatId, messageId, text);
+    if (messageId) {
+      await bot.api.editMessageText(chatId, messageId, text);
+    }
   } catch (e) {
     // Best-effort update
   }
@@ -223,92 +218,24 @@ export async function handleStoryVideoStart(
 }
 
 /**
- * Downloads or prepares cover art image for the song into the jobDir.
+ * Creates the Canvas Story Card directly inside the Telegram Bot.
+ * Replicates the Next.js Story Card styling (ambient blurred background,
+ * centered artwork card, badge, progress bar, watermark) completely locally
+ * without calling any Next.js API endpoints.
  */
 async function prepareSongCoverImage(
   song: any,
-  jobDir: string
+  jobDir: string,
+  resolution: "big" | "small" = "small",
+  bot: Bot
 ): Promise<string> {
-  const imagesDir = path.join(jobDir, "images");
-  await mkdir(imagesDir, { recursive: true });
-  const coverPath = path.join(imagesDir, "image_0.jpg");
-
-  // 1. Check if Telegram File ID for cover is present
-  const telegramCoverId =
-    song.telegramCoverId || song.telegramFileId || song.coverTelegramId;
-
-  if (telegramCoverId && botInstance && downloadTelegramFile) {
-    try {
-      await downloadTelegramFile(botInstance.api, telegramCoverId, coverPath);
-      return coverPath;
-    } catch (e) {
-      console.warn("Could not download telegram cover art, falling back:", e);
-    }
-  }
-
-  // 2. Check if song.coverArt is a web URL
-  if (
-    typeof song.coverArt === "string" &&
-    (song.coverArt.startsWith("http://") ||
-      song.coverArt.startsWith("https://"))
-  ) {
-    try {
-      const resp = await fetch(song.coverArt);
-      if (resp.ok) {
-        const buffer = await resp.arrayBuffer();
-        await writeFile(coverPath, Buffer.from(buffer));
-        return coverPath;
-      }
-    } catch (e) {
-      console.warn("Could not fetch web cover art, falling back:", e);
-    }
-  }
-
-  // 3. Check if local cover image file exists
-  if (typeof song.coverArt === "string") {
-    try {
-      const fs = await import("fs/promises");
-      const localCandidates = [
-        song.coverArt,
-        path.join(process.cwd(), "public", song.coverArt),
-        path.join(process.cwd(), "public", "uploads", song.coverArt),
-      ];
-      for (const cand of localCandidates) {
-        try {
-          const stat = await fs.stat(cand);
-          if (stat.isFile()) {
-            await fs.copyFile(cand, coverPath);
-            return coverPath;
-          }
-        } catch {
-          // Check next candidate
-        }
-      }
-    } catch {
-      // Fall through to fallback
-    }
-  }
-
-  // 4. Fallback: generate a clean solid background image with FFmpeg
-  const { spawn } = await import("child_process");
-  await new Promise<void>((resolve, reject) => {
-    const proc = spawn("ffmpeg", [
-      "-y",
-      "-f",
-      "lavfi",
-      "-i",
-      "color=c=0x18181b:s=1080x1920:d=1",
-      "-frames:v",
-      "1",
-      coverPath,
-    ]);
-    proc.on("close", (code) => {
-      if (code === 0) resolve();
-      else reject(new Error(`FFmpeg fallback cover exited with code ${code}`));
-    });
-  });
-
-  return coverPath;
+  return await createStoryCardInBot(
+    song,
+    jobDir,
+    resolution,
+    bot,
+    downloadTelegramFile
+  );
 }
 
 /**
@@ -316,7 +243,8 @@ async function prepareSongCoverImage(
  */
 export async function executeStoryRendering(
   chatId: number,
-  userId: number
+  userId: number,
+  bot: Bot
 ): Promise<void> {
   const state = getStoryState(userId);
   if (!state || state.step !== "rendering") return;
@@ -339,13 +267,15 @@ export async function executeStoryRendering(
 
     const rawAudioPath = path.join(jobDir, "raw_audio.mp3");
     await updateStoryProgress(
+      bot,
       chatId,
       state.progressMessageId,
       "📥 درحال دریافت فایل صوتی از سرور تلگرام..."
     );
-    await downloadTelegramFile(botInstance.api, audioFile.fileId, rawAudioPath);
+    await downloadTelegramFile(bot.api, audioFile.fileId, rawAudioPath);
 
     await updateStoryProgress(
+      bot,
       chatId,
       state.progressMessageId,
       "✂️ درحال برش بازه زمانی آهنگ..."
@@ -353,6 +283,7 @@ export async function executeStoryRendering(
     await cropAudio(rawAudioPath, audioPath, state.startMs, state.endMs);
 
     await updateStoryProgress(
+      bot,
       chatId,
       state.progressMessageId,
       "🎞 درحال ساخت اسلایدشو تصویر..."
@@ -370,6 +301,7 @@ export async function executeStoryRendering(
     let assPath: string | null = null;
     if (state.lyricsType === "synced" && song.syncedLyrics) {
       await updateStoryProgress(
+        bot,
         chatId,
         state.progressMessageId,
         "📝 تولید زیرنویس همگام‌سازی شده (Synced)..."
@@ -382,6 +314,7 @@ export async function executeStoryRendering(
       );
     } else if (state.lyricsType === "simple" && song.lyrics) {
       await updateStoryProgress(
+        bot,
         chatId,
         state.progressMessageId,
         "📝 تولید زیرنویس متن آهنگ (Simple)..."
@@ -396,6 +329,7 @@ export async function executeStoryRendering(
     }
 
     await updateStoryProgress(
+      bot,
       chatId,
       state.progressMessageId,
       "🎬 درحال رندر و فشرده‌سازی ویدیوی نهایی..."
@@ -409,6 +343,7 @@ export async function executeStoryRendering(
     );
 
     await updateStoryProgress(
+      bot,
       chatId,
       state.progressMessageId,
       "📤 درحال ارسال ویدیوی استوری..."
@@ -421,7 +356,7 @@ export async function executeStoryRendering(
     const lyricsNote =
       state.lyricsType === "synced" ? "✨ متن همگام‌سازی شده" : "📝 متن ترانه";
 
-    await botInstance.api.sendVideo(chatId, new InputFile(outputPath), {
+    await bot.api.sendVideo(chatId, new InputFile(outputPath), {
       caption:
         `🎬 <b>${song.title}</b> — ${song.artist}\n` +
         `⏱ بازه: <code>${formatMs(state.startMs)}</code> تا <code>${formatMs(
@@ -437,7 +372,7 @@ export async function executeStoryRendering(
     });
 
     if (state.progressMessageId) {
-      await botInstance.api
+      await bot.api
         .editMessageText(
           chatId,
           state.progressMessageId,
@@ -455,10 +390,7 @@ export async function executeStoryRendering(
     clearStoryState(userId);
 
     const errorMsg = (err as Error).message || "خطای ناشناخته";
-    await botInstance.api.sendMessage(
-      chatId,
-      `❌ خطا در ساخت ویدیو: ${errorMsg}`
-    );
+    await bot.api.sendMessage(chatId, `❌ خطا در ساخت ویدیو: ${errorMsg}`);
   }
 }
 
@@ -482,7 +414,12 @@ export function registerStoryVideoCallbacks(bot: Bot): void {
 
     try {
       const song = getSongById(state.songId);
-      const coverPath = await prepareSongCoverImage(song, state.jobDir);
+      const coverPath = await prepareSongCoverImage(
+        song,
+        state.jobDir,
+        resolution,
+        bot
+      );
 
       state.images = [coverPath];
       state.resolution = resolution;
@@ -518,7 +455,7 @@ export function registerStoryVideoCallbacks(bot: Bot): void {
       setStoryState(userId, state);
 
       // Execute rendering for story video
-      void executeStoryRendering(ctx.chat!.id, userId);
+      void executeStoryRendering(ctx.chat!.id, userId, bot);
     } catch (e) {
       console.error("Quick story initiation error:", e);
       await ctx.reply(`❌ خطا در شروع ساخت ویدیو: ${(e as Error).message}`);
@@ -628,7 +565,7 @@ export function registerStoryVideoCallbacks(bot: Bot): void {
     state.progressMessageId = progress.message_id;
     setStoryState(userId, state);
 
-    void executeStoryRendering(ctx.chat!.id, userId);
+    void executeStoryRendering(ctx.chat!.id, userId, bot);
   });
 
   // 4. Cancel
