@@ -44,7 +44,11 @@ async function obtainRawCover(
   song: SongData,
   tempCoverPath: string,
   botInstance?: any,
-  downloadTelegramFile?: (api: any, fileId: string, dest: string) => Promise<any>
+  downloadTelegramFile?: (
+    api: any,
+    fileId: string,
+    dest: string
+  ) => Promise<any>
 ): Promise<boolean> {
   // 1. Try Telegram file ID
   const telegramId =
@@ -62,7 +66,8 @@ async function obtainRawCover(
   // 2. Try web URL
   if (
     typeof song.coverArt === "string" &&
-    (song.coverArt.startsWith("http://") || song.coverArt.startsWith("https://"))
+    (song.coverArt.startsWith("http://") ||
+      song.coverArt.startsWith("https://"))
   ) {
     try {
       const resp = await fetch(song.coverArt);
@@ -188,7 +193,11 @@ export async function createStoryCardInBot(
   jobDir: string,
   resolution: "big" | "small" = "small",
   botInstance?: any,
-  downloadTelegramFile?: (api: any, fileId: string, dest: string) => Promise<any>,
+  downloadTelegramFile?: (
+    api: any,
+    fileId: string,
+    dest: string
+  ) => Promise<any>,
   clipStartSec = 0,
   clipEndSec = 15
 ): Promise<string> {
@@ -209,13 +218,15 @@ export async function createStoryCardInBot(
     downloadTelegramFile
   );
 
-  const totalDuration = (song as any).duration && (song as any).duration > 0
-    ? (song as any).duration
-    : 210;
+  const totalDuration =
+    (song as any).duration && (song as any).duration > 0
+      ? (song as any).duration
+      : 210;
   const currentProgress = Math.max(0, Math.min(clipStartSec, totalDuration));
-  const progressRatio = totalDuration > 0
-    ? Math.max(0.04, Math.min(0.96, currentProgress / totalDuration))
-    : 0.38;
+  const progressRatio =
+    totalDuration > 0
+      ? Math.max(0.04, Math.min(0.96, currentProgress / totalDuration))
+      : 0.38;
 
   // 1. Check if Node Canvas / @napi-rs/canvas is installed in the bot project
   try {
@@ -291,7 +302,14 @@ export async function createStoryCardInBot(
       ctx.fillStyle = "#ec4899";
       const waveHeights = [16, 28, 38, 22, 32, 18];
       waveHeights.forEach((h, i) => {
-        drawRoundedRectPath(ctx, waveStartX + i * 9, waveCenterY - h / 2, 5, h, 2.5);
+        drawRoundedRectPath(
+          ctx,
+          waveStartX + i * 9,
+          waveCenterY - h / 2,
+          5,
+          h,
+          2.5
+        );
         ctx.fill();
       });
 
@@ -359,7 +377,14 @@ export async function createStoryCardInBot(
         const lyricsBoxH = 900;
         const lyricsBoxX = (width - lyricsBoxW) / 2;
 
-        drawRoundedRectPath(ctx, lyricsBoxX, lyricsBoxY, lyricsBoxW, lyricsBoxH, 36);
+        drawRoundedRectPath(
+          ctx,
+          lyricsBoxX,
+          lyricsBoxY,
+          lyricsBoxW,
+          lyricsBoxH,
+          36
+        );
         ctx.fillStyle = "rgba(255, 255, 255, 0.06)";
         ctx.fill();
         ctx.strokeStyle = "rgba(255, 255, 255, 0.16)";
@@ -387,7 +412,12 @@ export async function createStoryCardInBot(
 
         // Active progress fill
         const progressWidth = Math.round(barWidth * progressRatio);
-        const progGrad = ctx.createLinearGradient(barX, barY, barX + progressWidth, barY);
+        const progGrad = ctx.createLinearGradient(
+          barX,
+          barY,
+          barX + progressWidth,
+          barY
+        );
         progGrad.addColorStop(0, "#ec4899");
         progGrad.addColorStop(1, "#a855f7");
         drawRoundedRectPath(ctx, barX, barY, progressWidth, barHeight, 4);
@@ -407,7 +437,11 @@ export async function createStoryCardInBot(
         ctx.fillText(formatDurationSec(currentProgress), barX, barY + 38);
 
         ctx.textAlign = "right";
-        ctx.fillText(formatDurationSec(totalDuration), barX + barWidth, barY + 38);
+        ctx.fillText(
+          formatDurationSec(totalDuration),
+          barX + barWidth,
+          barY + 38
+        );
 
         // Player Buttons (Prev, Play Circle, Next, Heart)
         const btnY = barY + 95;
@@ -473,12 +507,17 @@ export async function createStoryCardInBot(
         ctx.restore();
       }
 
-      const buffer = canvas.toBuffer ? canvas.toBuffer("image/jpeg") : await canvas.encode("jpeg");
+      const buffer = canvas.toBuffer
+        ? canvas.toBuffer("image/jpeg")
+        : await canvas.encode("jpeg");
       await writeFile(outputImagePath, buffer);
       return outputImagePath;
     }
   } catch (err) {
-    console.warn("Canvas 2D rendering skipped, falling back to FFmpeg compositor:", err);
+    console.warn(
+      "Canvas 2D rendering skipped, falling back to FFmpeg compositor:",
+      err
+    );
   }
 
   // --- 2. FFmpeg Filter Compositor Fallback ---
@@ -511,7 +550,12 @@ export async function createStoryCardInBot(
         `drawbox=x=920:y=600:w=${progressWidth}:h=8:color=0xec4899@0.9:t=fill[out]`;
     }
   } else {
-    inputArgs.push("-f", "lavfi", "-i", `color=c=0x0f172a:s=${width}x${height}:d=1`);
+    inputArgs.push(
+      "-f",
+      "lavfi",
+      "-i",
+      `color=c=0x0f172a:s=${width}x${height}:d=1`
+    );
     filterComplex =
       `[0:v]drawbox=x=320:y=120:w=440:h=72:color=white@0.12:t=fill,` +
       `drawbox=x=170:y=240:w=740:h=110:color=white@0.09:t=fill,` +

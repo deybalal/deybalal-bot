@@ -19,11 +19,11 @@ import {
 import { getState, setState, clearState, isBusy } from "../lyricVideo/state";
 import { cleanupJobDir, createJobDir } from "../lyricVideo/utils";
 import { formatMs } from "../lyricVideo/timeParser";
-import { createStoryCardInBot } from "./storyCanvasGenerator";
 import { getSongById } from "../dbUtils";
 import { downloadTelegramFile } from "../../tools/downloadTelegramFile";
 import { generateStoryASSFile } from "../storyVideo/storyAssGenerator";
 import { generateSimpleASSFile } from "../storyVideo/simpleAssGenerator";
+import { createStoryCardInBot } from "../storyVideo/storyCanvasGenerator";
 
 export type StoryLyricsType = "synced" | "simple";
 
