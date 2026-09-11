@@ -48,6 +48,7 @@ import { escapeHtml } from "../tools/escapeHtml.js";
 import { handleVoiceIdentification } from "../tools/handleVoiceIdentification.js";
 import { registerIdentifyCallback } from "./callbacks/identify.js";
 import { cors } from "hono/cors";
+import { registerStoryVideoCallbacks } from "./callbacks/storyVideo.js";
 
 const app = new Hono();
 
@@ -89,6 +90,7 @@ export function registerCallbacks(bot: Bot) {
   registerHelpCallback(bot);
   registerRandomLyricCallbacks(bot);
   registerIdentifyCallback(bot);
+  registerStoryVideoCallbacks(bot);
 }
 
 registerCallbacks(bot);
