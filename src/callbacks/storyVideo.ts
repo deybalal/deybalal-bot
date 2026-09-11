@@ -20,24 +20,8 @@ import { cleanupJobDir, createJobDir } from "../lyricVideo/utils";
 import { generateASSFile } from "../lyricVideo/assGenerator";
 import { formatMs } from "../lyricVideo/timeParser";
 import { generateSimpleASSFile } from "../lyricVideo/simpleAssGenerator";
-
-// In the bot project structure, these are located at:
-// ../../dbUtils and ../../../tools/downloadTelegramFile and ../../..
-let getSongById: any;
-try {
-  const dbModule = require("../../dbUtils");
-  getSongById = dbModule.getSongById;
-} catch {
-  getSongById = () => null;
-}
-
-let downloadTelegramFile: any;
-try {
-  const dlModule = require("../../../tools/downloadTelegramFile");
-  downloadTelegramFile = dlModule.downloadTelegramFile;
-} catch {
-  downloadTelegramFile = async () => {};
-}
+import { getSongById } from "../dbUtils";
+import { downloadTelegramFile } from "../../tools/downloadTelegramFile";
 
 let botInstance: any;
 try {
@@ -347,10 +331,7 @@ export async function executeStoryRendering(
     if (!song) throw new Error("آهنگ پیدا نشد.");
 
     const audioFile =
-      song.telegram?.["320"] ||
-      song.telegram?.["128"] ||
-      song.telegram?.["64"] ||
-      song.telegramAudio;
+      song.telegram?.["320"] || song.telegram?.["128"] || song.telegram?.["64"];
 
     if (!audioFile?.fileId) {
       throw new Error("فایل صوتی آهنگ در تلگرام یافت نشد.");
