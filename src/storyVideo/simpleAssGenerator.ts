@@ -66,13 +66,15 @@ Style: CardQuote,${fontName},140,&H5994EC,&H000000FF,&H00000000,&H80000000,-1,0,
 Style: CardTimeLeft,${fontName},48,&H40FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,2,2,4,40,40,0,1
 Style: CardTimeRight,${fontName},48,&H40FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,2,2,6,40,40,0,1
 Style: CardWatermark,${fontName},58,&H40FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,2.2,2.2,5,40,40,0,1
+Style: SliderFill,${fontName},10,&H9948EC,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,0,0,7,0,0,0,1
+Style: SliderThumb,${fontName},10,&H00FFFFFF,&H000000FF,&H00000000,&H40000000,0,0,0,0,100,100,0,0,1,0,0,5,0,0,0,1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text`;
 
   const dialogueLines: string[] = [];
 
-  // Permanent UI Text Overlays
+  // Permanent UI Text Overlays & Dynamic Player Controls
   if (song && isPortrait) {
     const cleanTitle = (song.title || "آهنگ لری")
       .replace(/\\/g, "")
@@ -80,7 +82,6 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text`
     const cleanArtist = (song.artist || "دی بلال")
       .replace(/\\/g, "")
       .slice(0, 32);
-    const startProgressStr = formatDurationSec(clipStartSec);
     const totalDurationStr = formatDurationSec(song.duration || 210);
 
     // Top Header Badge
@@ -104,10 +105,54 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text`
       `Dialogue: 0,0:00:00.00,${endTimeStr},CardQuote,,0,0,0,,{\\pos(950,500)}“`
     );
 
-    // Timestamps below Progress Bar
-    dialogueLines.push(
-      `Dialogue: 0,0:00:00.00,${endTimeStr},CardTimeLeft,,0,0,0,,{\\pos(170,1395)}${startProgressStr}`
+    // Dynamic Player Slider: barX=170, barY=1340, width=740, height=8
+    const totalDuration =
+      song.duration && song.duration > 0 ? song.duration : 210;
+    const startRatio = Math.max(0, Math.min(1, clipStartSec / totalDuration));
+    const endRatio = Math.max(
+      startRatio,
+      Math.min(1, (clipStartSec + clipDurationSec) / totalDuration)
     );
+
+    const barX = 170;
+    const barY = 1340;
+    const barWidth = 740;
+    const barHeight = 8;
+    const durationMs = Math.round(clipDurationSec * 1000);
+
+    const startX = Math.round(barX + barWidth * startRatio);
+    const endX = Math.round(barX + barWidth * endRatio);
+
+    // 1. Dynamic Progress Fill (expands smoothly across playback duration)
+    dialogueLines.push(
+      `Dialogue: 1,0:00:00.00,${endTimeStr},SliderFill,,0,0,0,,{\\pos(${barX},${barY})\\clip(${barX},${
+        barY - 4
+      },${startX},${barY + barHeight + 4})\\t(0,${durationMs},\\clip(${barX},${
+        barY - 4
+      },${endX},${
+        barY + barHeight + 4
+      }))\\p1}m 0 0 l ${barWidth} 0 l ${barWidth} ${barHeight} l 0 ${barHeight}{\\p0}`
+    );
+
+    // 2. Dynamic Thumb Circle (slides smoothly across playback duration)
+    const thumbCenterY = barY + barHeight / 2;
+    dialogueLines.push(
+      `Dialogue: 1,0:00:00.00,${endTimeStr},SliderThumb,,0,0,0,,{\\move(${startX},${thumbCenterY},${endX},${thumbCenterY},0,${durationMs})\\p1}m -12 0 b -12 -6.6 -6.6 -12 0 -12 b 6.6 -12 12 -6.6 12 0 b 12 6.6 6.6 12 0 12 b -6.6 12 -12 6.6 -12 0{\\p0}`
+    );
+
+    // 3. Dynamic Elapsed Time Counter (ticking upward second by second)
+    const totalSecs = Math.ceil(clipDurationSec);
+    for (let s = 0; s < totalSecs; s++) {
+      const segStart = msToAssTime(s * 1000);
+      const segEnd =
+        s === totalSecs - 1 ? endTimeStr : msToAssTime((s + 1) * 1000);
+      const curTimeStr = formatDurationSec(clipStartSec + s);
+      dialogueLines.push(
+        `Dialogue: 0,${segStart},${segEnd},CardTimeLeft,,0,0,0,,{\\pos(170,1395)}${curTimeStr}`
+      );
+    }
+
+    // Permanent Total Duration on Right
     dialogueLines.push(
       `Dialogue: 0,0:00:00.00,${endTimeStr},CardTimeRight,,0,0,0,,{\\pos(910,1395)}${totalDurationStr}`
     );

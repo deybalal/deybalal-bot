@@ -21,8 +21,8 @@ import {
   setStoryState,
   clearStoryState,
   isStoryBusy,
-  type StoryLyricsType,
   type StoryVideoState,
+  type StoryLyricsType,
 } from "../storyVideo/storyState";
 import {
   createStoryJobDir,
@@ -228,6 +228,26 @@ export async function executeStoryRendering(
     const song = getSongById(state.songId);
     if (!song) throw new Error("آهنگ پیدا نشد.");
 
+    // Prepare Story Card cover image if not already prepared
+    if (state.images.length === 0) {
+      await updateStoryProgress(
+        bot,
+        chatId,
+        state.progressMessageId,
+        "🎨 درحال طراحی و ساخت کارت استوری..."
+      );
+      const coverPath = await prepareSongCoverImage(
+        song,
+        jobDir,
+        state.resolution ?? "small",
+        bot,
+        Math.round(state.startMs / 1000),
+        Math.round(state.endMs / 1000)
+      );
+      state.images = [coverPath];
+      setStoryState(userId, state);
+    }
+
     const audioFile =
       song.telegram?.["320"] || song.telegram?.["128"] || song.telegram?.["64"];
 
@@ -428,20 +448,11 @@ export function registerStoryVideoCallbacks(bot: Bot): void {
     }
 
     const resolution = ctx.match[1] as "big" | "small";
-    await ctx.answerCallbackQuery("⏳ درحال آماده‌سازی کاور و شروع پردازش...");
+    await ctx.answerCallbackQuery().catch(() => {});
 
     try {
       const song = getSongById(state.songId);
-      const coverPath = await prepareSongCoverImage(
-        song,
-        state.jobDir,
-        resolution,
-        bot,
-        Math.round(state.startMs / 1000),
-        Math.round(state.endMs / 1000)
-      );
-
-      state.images = [coverPath];
+      state.images = [];
       state.resolution = resolution;
       state.step = "rendering";
       setStoryState(userId, state);
@@ -456,7 +467,7 @@ export function registerStoryVideoCallbacks(bot: Bot): void {
       const progress = await ctx.reply(
         `🎥 <b>شروع ساخت ویدیو</b>\n` +
           `رزولوشن: ${resLabel}\n` +
-          `⏳ درحال پردازش فایل...`,
+          `⏳ درحال قرارگیری در صف پردازش...`,
         { parse_mode: "HTML" }
       );
 

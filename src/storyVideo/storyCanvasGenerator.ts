@@ -382,25 +382,8 @@ export async function createStoryCardInBot(
         ctx.fillStyle = "rgba(255, 255, 255, 0.22)";
         ctx.fill();
 
-        // Active progress fill
-        const progressWidth = Math.round(barWidth * progressRatio);
-        const progGrad = ctx.createLinearGradient(
-          barX,
-          barY,
-          barX + progressWidth,
-          barY
-        );
-        progGrad.addColorStop(0, "#ec4899");
-        progGrad.addColorStop(1, "#a855f7");
-        drawRoundedRectPath(ctx, barX, barY, progressWidth, barHeight, 4);
-        ctx.fillStyle = progGrad;
-        ctx.fill();
-
-        // Thumb handle circle
-        ctx.beginPath();
-        ctx.arc(barX + progressWidth, barY + barHeight / 2, 11, 0, Math.PI * 2);
-        ctx.fillStyle = "#ffffff";
-        ctx.fill();
+        // Note: The active colored progress fill and white thumb circle are rendered
+        // dynamically via ASS subtitles to animate live across playback without ghosting.
 
         // Player Buttons (Prev, Play Circle, Next, Heart)
         const btnY = barY + 95;
@@ -491,16 +474,14 @@ export async function createStoryCardInBot(
         `drawbox=x=170:y=240:w=740:h=110:color=white@0.09:t=fill,` +
         `drawbox=x=80:y=400:w=920:h=900:color=white@0.06:t=fill,` +
         `drawbox=x=80:y=400:w=920:h=900:color=white@0.16:t=2,` +
-        `drawbox=x=170:y=1340:w=740:h=8:color=white@0.22:t=fill,` +
-        `drawbox=x=170:y=1340:w=${progressWidth}:h=8:color=0xec4899@0.9:t=fill[base];` +
+        `drawbox=x=170:y=1340:w=740:h=8:color=white@0.22:t=fill[base];` +
         `[base][thumb]overlay=812:252[out]`;
     } else {
       filterComplex =
         `[0:v]scale=1920:1080:force_original_aspect_ratio=increase,crop=1920:1080,boxblur=50:5,eq=brightness=-0.35:saturation=1.35[bg];` +
         `[0:v]scale=680:680:force_original_aspect_ratio=increase,crop=680:680,pad=700:700:(ow-iw)/2:(oh-ih)/2:color=white@0.25[card];` +
         `[bg][card]overlay=150:(H-h)/2[base];` +
-        `[base]drawbox=x=920:y=600:w=840:h=8:color=white@0.22:t=fill,` +
-        `drawbox=x=920:y=600:w=${progressWidth}:h=8:color=0xec4899@0.9:t=fill[out]`;
+        `[base]drawbox=x=920:y=600:w=840:h=8:color=white@0.22:t=fill[out]`;
     }
   } else {
     inputArgs.push(
@@ -514,8 +495,7 @@ export async function createStoryCardInBot(
       `drawbox=x=170:y=240:w=740:h=110:color=white@0.09:t=fill,` +
       `drawbox=x=80:y=400:w=920:h=900:color=white@0.06:t=fill,` +
       `drawbox=x=80:y=400:w=920:h=900:color=white@0.16:t=2,` +
-      `drawbox=x=170:y=1340:w=740:h=8:color=white@0.22:t=fill,` +
-      `drawbox=x=170:y=1340:w=${progressWidth}:h=8:color=0xec4899@0.9:t=fill[out]`;
+      `drawbox=x=170:y=1340:w=740:h=8:color=white@0.22:t=fill[out]`;
   }
 
   const success = await runFFmpegCmd([
