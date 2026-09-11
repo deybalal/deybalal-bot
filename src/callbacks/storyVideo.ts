@@ -228,6 +228,8 @@ export async function executeStoryRendering(
     const song = getSongById(state.songId);
     if (!song) throw new Error("آهنگ پیدا نشد.");
 
+    console.log("song ", song);
+
     const audioFile =
       song.telegram?.["320"] || song.telegram?.["128"] || song.telegram?.["64"];
 
