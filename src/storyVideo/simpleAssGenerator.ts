@@ -98,7 +98,9 @@ export async function generateSimpleASSFile(
   // Minimum duration per chunk is 3 seconds, maximum is 6 seconds
   const idealCount = Math.max(1, Math.round(clipDurationMs / 4000));
   const selectedChunks =
-    chunks.length <= idealCount ? chunks : chunks.slice(0, idealCount);
+    chunks.length <= idealCount
+      ? chunks
+      : chunks.slice(0, idealCount);
 
   const chunkDurationMs = clipDurationMs / selectedChunks.length;
   const entries: SimpleLyricEntry[] = selectedChunks.map((text, idx) => ({

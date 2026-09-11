@@ -3,11 +3,12 @@ import { Bot, InlineKeyboard, InputFile } from "grammy";
 import path from "path";
 import { mkdir, writeFile } from "fs/promises";
 import {
-  cropAudio,
-  buildSlideshow,
-  renderFinal,
-  generateThumbnail,
-} from "../lyricVideo/ffmpeg";
+  cropStoryAudio,
+  renderStoryVideo,
+  buildStorySlideshow,
+  renderFinalStory,
+  generateStoryThumbnail,
+} from "../storyVideo/storyFfmpeg";
 
 import {
   enqueue,
@@ -17,12 +18,12 @@ import {
 } from "../lyricVideo/queue/videoQueue";
 import { getState, setState, clearState, isBusy } from "../lyricVideo/state";
 import { cleanupJobDir, createJobDir } from "../lyricVideo/utils";
-import { generateASSFile } from "../lyricVideo/assGenerator";
 import { formatMs } from "../lyricVideo/timeParser";
-import { generateSimpleASSFile } from "../lyricVideo/simpleAssGenerator";
-import { createStoryCardInBot, runFFmpegCmd } from "./storyCanvasGenerator";
+import { createStoryCardInBot } from "./storyCanvasGenerator";
 import { getSongById } from "../dbUtils";
 import { downloadTelegramFile } from "../../tools/downloadTelegramFile";
+import { generateStoryASSFile } from "../storyVideo/storyAssGenerator";
+import { generateSimpleASSFile } from "../storyVideo/simpleAssGenerator";
 
 export type StoryLyricsType = "synced" | "simple";
 
@@ -243,68 +244,6 @@ async function prepareSongCoverImage(
 }
 
 /**
- * Ultra-fast single-pass video renderer for Story Cards.
- * Encodes image + audio + subtitles directly into the final MP4 in ~2-3 seconds,
- * eliminating the slow multi-pass slideshow, zoompan, and drawtext font bottlenecks.
- */
-async function renderSingleCardVideo(
-  imagePath: string,
-  audioPath: string,
-  outputPath: string,
-  assPath: string | null,
-  resolution: "big" | "small" = "small",
-  durationSec = 15
-): Promise<void> {
-  const width = resolution === "big" ? 1920 : 1080;
-  const height = resolution === "big" ? 1080 : 1920;
-
-  const filters: string[] = [
-    `scale=${width}:${height}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1`,
-  ];
-  if (assPath) {
-    filters.push(`ass='${assPath.replace(/\\/g, "/").replace(/:/g, "\\:")}'`);
-  }
-
-  const filterStr = filters.join(",");
-
-  const args: string[] = [
-    "-loop",
-    "1",
-    "-i",
-    imagePath,
-    "-i",
-    audioPath,
-    "-vf",
-    filterStr,
-    "-c:v",
-    "libx264",
-    "-preset",
-    "veryfast",
-    "-crf",
-    "23",
-    "-pix_fmt",
-    "yuv420p",
-    "-c:a",
-    "aac",
-    "-b:a",
-    "192k",
-    "-af",
-    "aresample=async=1:first_pts=0",
-    "-t",
-    durationSec.toFixed(3),
-    "-shortest",
-    "-movflags",
-    "+faststart",
-    outputPath,
-  ];
-
-  const success = await runFFmpegCmd(args);
-  if (!success) {
-    throw new Error("FFmpeg single-pass story video render failed");
-  }
-}
-
-/**
  * Executes rendering specifically for Story Video clips.
  */
 export async function executeStoryRendering(
@@ -346,9 +285,9 @@ export async function executeStoryRendering(
       state.progressMessageId,
       "✂️ درحال برش بازه زمانی آهنگ..."
     );
-    await cropAudio(rawAudioPath, audioPath, state.startMs, state.endMs);
+    await cropStoryAudio(rawAudioPath, audioPath, state.startMs, state.endMs);
 
-    const durationSec = Math.round((state.endMs - state.startMs) / 1000);
+    const durationSec = Math.max(1, (state.endMs - state.startMs) / 1000);
 
     // Generate Subtitles (ASS) based on selected lyrics type
     let assPath: string | null = null;
@@ -357,15 +296,25 @@ export async function executeStoryRendering(
         bot,
         chatId,
         state.progressMessageId,
-        "📝 تولید زیرنویس همگام‌سازی شده (Synced)..."
+        "📝 تولید زیرنویس همگام‌سازی شده پویا..."
       );
-      assPath = await generateASSFile(song.syncedLyrics, jobDir);
+      assPath = await generateStoryASSFile(
+        song.syncedLyrics,
+        jobDir,
+        state.startMs,
+        state.endMs,
+        {
+          title: song.title,
+          artist: song.artist,
+          duration: song.duration,
+        }
+      );
     } else if (state.lyricsType === "simple" && song.lyrics) {
       await updateStoryProgress(
         bot,
         chatId,
         state.progressMessageId,
-        "📝 تولید زیرنویس متن آهنگ (Simple)..."
+        "📝 تولید زیرنویس متن ترانه..."
       );
       assPath = await generateSimpleASSFile(
         song.lyrics,
@@ -385,13 +334,13 @@ export async function executeStoryRendering(
         state.progressMessageId,
         "🎬 درحال ساخت و رندر سریع ویدیوی استوری..."
       );
-      await renderSingleCardVideo(
+      await renderStoryVideo(
         state.images[0]!,
         audioPath,
         outputPath,
         assPath,
-        state.resolution ?? "small",
-        durationSec
+        durationSec,
+        state.resolution ?? "small"
       );
     } else {
       // Multi-image custom photos path
@@ -402,11 +351,10 @@ export async function executeStoryRendering(
         "🎞 درحال ساخت اسلایدشو تصاویر..."
       );
       const durationMs = state.endMs - state.startMs;
-      await buildSlideshow(
+      await buildStorySlideshow(
         state.images,
         slideshowPath,
         durationMs,
-        jobDir,
         state.resolution ?? "small"
       );
 
@@ -416,12 +364,12 @@ export async function executeStoryRendering(
         state.progressMessageId,
         "🎬 درحال رندر و فشرده‌سازی ویدیوی نهایی..."
       );
-      await renderFinal(
+      await renderFinalStory(
         slideshowPath,
         audioPath,
         outputPath,
         assPath,
-        state.resolution ?? "small"
+        durationSec
       );
     }
 
@@ -433,8 +381,9 @@ export async function executeStoryRendering(
     );
 
     const thumbPath = path.join(jobDir, "thumb.jpg");
-    await generateThumbnail(outputPath, thumbPath);
+    await generateStoryThumbnail(outputPath, thumbPath);
 
+    const durationSecTwo = Math.round((state.endMs - state.startMs) / 1000);
     const lyricsNote =
       state.lyricsType === "synced" ? "✨ متن همگام‌سازی شده" : "📝 متن ترانه";
 
@@ -443,7 +392,7 @@ export async function executeStoryRendering(
         `🎬 <b>${song.title}</b> — ${song.artist}\n` +
         `⏱ بازه: <code>${formatMs(state.startMs)}</code> تا <code>${formatMs(
           state.endMs
-        )}</code> (${durationSec} ثانیه)\n` +
+        )}</code> (${durationSecTwo} ثانیه)\n` +
         `${lyricsNote}\n\n` +
         `🎵 پلتفرم موسیقی لری دی‌بلال\n@deybalalir`,
       parse_mode: "HTML",
