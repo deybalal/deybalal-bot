@@ -44,19 +44,17 @@ export async function cropAudio(
   const durationSec = (endMs - startMs) / 1000;
 
   const result = await runFFmpeg([
+    "-i",
+    inputPath,
     "-ss",
     startSec.toFixed(3),
     "-t",
     durationSec.toFixed(3),
-    "-i",
-    inputPath,
     "-vn",
-    "-c:a",
+    "-acodec",
     "libmp3lame",
-    "-b:a",
-    "192k",
-    "-af",
-    "aresample=async=1:first_pts=0",
+    "-q:a",
+    "2",
     outputPath,
   ]);
 
@@ -108,19 +106,38 @@ export async function buildSlideshow(
     inputs.push("-loop", "1", "-t", clipDurationSec.toFixed(3), "-i", img);
   }
 
+  const zoompanFilters: string[] = [];
+  for (let i = 0; i < n; i++) {
+    const directions = [
+      { x: "iw/2-(iw/zoom/2)", y: "ih/2-(ih/zoom/2)" },
+      { x: "iw/2-(iw/zoom/2)+(iw/zoom)*0.05", y: "ih/2-(ih/zoom/2)" },
+      { x: "iw/2-(iw/zoom/2)", y: "ih/2-(ih/zoom/2)+(ih/zoom)*0.05" },
+      { x: "iw/2-(iw/zoom/2)-(iw/zoom)*0.05", y: "ih/2-(ih/zoom/2)" },
+    ];
+    const dir = directions[i % directions.length]!;
+
+    zoompanFilters.push(
+      `[${i}:v]scale=${width}:${height}:force_original_aspect_ratio=decrease,` +
+        `pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2:color=black,` +
+        `setsar=1,` +
+        `zoompan=z='min(zoom+0.0005,1.1)':` +
+        `d=${clipDurationFrames}:` +
+        `x='${dir.x}':` +
+        `y='${dir.y}':` +
+        `s=${width}x${height}:fps=30[v${i}]`
+    );
+  }
+
   if (n === 1) {
-    const filter = `scale=${width}:${height}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1`;
+    const filterComplex = zoompanFilters.join(";\n");
     const result = await runFFmpeg([
-      "-loop",
-      "1",
-      "-framerate",
-      "30",
+      ...inputs,
+      "-filter_complex",
+      filterComplex,
+      "-map",
+      "[v0]",
       "-t",
       totalDurationSec.toFixed(3),
-      "-i",
-      imagePaths[0]!,
-      "-vf",
-      filter,
       "-c:v",
       "libx264",
       "-preset",
@@ -137,14 +154,6 @@ export async function buildSlideshow(
       throw new Error(`FFmpeg slideshow failed: ${result.stderr.slice(-500)}`);
     }
     return;
-  }
-
-  const slideFilters: string[] = [];
-  for (let i = 0; i < n; i++) {
-    slideFilters.push(
-      `[${i}:v]scale=${width}:${height}:force_original_aspect_ratio=decrease,` +
-        `pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1[v${i}]`
-    );
   }
 
   const xfadeTransitions = [
@@ -174,13 +183,13 @@ export async function buildSlideshow(
       `${currentLabel}${nextLabel}xfade=transition=${transition}:` +
       `duration=${crossfadeDuration}:offset=${offset}${outputLabel}`;
 
-    slideFilters.push(xfadeFilter);
+    zoompanFilters.push(xfadeFilter);
     currentLabel = outputLabel;
     accumulatedDuration =
       accumulatedDuration + clipDurationSec - crossfadeDuration;
   }
 
-  const filterComplex = slideFilters.join(";\n");
+  const filterComplex = zoompanFilters.join(";\n");
   const result = await runFFmpeg([
     ...inputs,
     "-filter_complex",
@@ -192,7 +201,7 @@ export async function buildSlideshow(
     "-c:v",
     "libx264",
     "-preset",
-    "veryfast",
+    "ultrafast",
     "-crf",
     "23",
     "-pix_fmt",
@@ -203,6 +212,9 @@ export async function buildSlideshow(
 
   if (!result.success) {
     console.log("Exit Code: ", result.exitCode);
+
+    // console.log("result.stderr 2".toUpperCase(), result.stderr);
+
     throw new Error(`FFmpeg slideshow failed: ${result.stderr.slice(-500)}`);
   }
 }
@@ -217,15 +229,25 @@ export async function renderFinal(
   const width = resolution === "big" ? 1920 : 1080;
   const height = resolution === "big" ? 1080 : 1920;
 
-  let videoFilters: string[] = [];
+  const watermark =
+    "drawtext=text='@deybalalir':" +
+    "fontcolor=white@0.75:" +
+    "fontsize=42:" +
+    "x=(w-text_w)/2:" +
+    "y=100:" +
+    "borderw=2:" +
+    "bordercolor=black@0.6";
 
-  videoFilters.push(`scale=${width}:${height}`);
+  let videoFilters: string[] = [];
 
   if (assPath) {
     videoFilters.push(
       `ass='${assPath.replace(/\\/g, "/").replace(/:/g, "\\:")}'`
     );
   }
+  videoFilters.push(watermark);
+
+  videoFilters.push(`scale=${width}:${height}`);
 
   const filter = videoFilters.join(",");
 
@@ -239,7 +261,7 @@ export async function renderFinal(
     "-c:v",
     "libx264",
     "-preset",
-    "veryfast",
+    "ultrafast",
     "-crf",
     "23",
     "-pix_fmt",
@@ -248,8 +270,6 @@ export async function renderFinal(
     "aac",
     "-b:a",
     "192k",
-    "-af",
-    "aresample=async=1:first_pts=0",
     "-shortest",
     "-movflags",
     "+faststart",

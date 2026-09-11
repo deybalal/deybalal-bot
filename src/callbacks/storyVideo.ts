@@ -359,13 +359,7 @@ export async function executeStoryRendering(
         state.progressMessageId,
         "📝 تولید زیرنویس همگام‌سازی شده (Synced)..."
       );
-      assPath = await generateASSFile(
-        song.syncedLyrics,
-        jobDir,
-        state.startMs,
-        state.endMs,
-        state.resolution ?? "small"
-      );
+      assPath = await generateASSFile(song.syncedLyrics, jobDir);
     } else if (state.lyricsType === "simple" && song.lyrics) {
       await updateStoryProgress(
         bot,
