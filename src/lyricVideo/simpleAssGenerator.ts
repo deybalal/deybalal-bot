@@ -27,21 +27,20 @@ function buildSimpleASSContent(
   const isPortrait = resolution === "small";
   const playResX = isPortrait ? 1080 : 1920;
   const playResY = isPortrait ? 1920 : 1080;
-  const fontSize = isPortrait ? 44 : 52;
-  const marginV = isPortrait ? 220 : 80;
-  const marginSide = isPortrait ? 60 : 120;
+  const fontSize = isPortrait ? 46 : 52;
+  const fontFamily = "Vazirmatn, Tahoma, Arial, DejaVu Sans, sans-serif";
 
   const header = `[Script Info]
 Title: Story Lyric Video - Simple Lyrics
 ScriptType: v4.00+
 PlayResX: ${playResX}
 PlayResY: ${playResY}
-WrapStyle: 0
+WrapStyle: 2
 ScaledBorderAndShadow: yes
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Lyric,Arial,${fontSize},&H00FFFFFF,&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,3.0,2.0,2,${marginSide},${marginSide},${marginV},1
+Style: StorySimple,${fontFamily},${fontSize},&H00FFFFFF,&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,2.5,3,5,80,80,0,1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text`;
@@ -50,7 +49,8 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text`
     const start = msToAssTime(entry.startMs);
     const end = msToAssTime(entry.endMs);
     const text = entry.text.replace(/\n/g, "\\N");
-    return `Dialogue: 0,${start},${end},Lyric,,0,0,0,,${text}`;
+    const pos = isPortrait ? "\\an5\\pos(540,850)" : "\\an5\\pos(1340,540)";
+    return `Dialogue: 0,${start},${end},StorySimple,,0,0,0,,{${pos}\\fad(250,250)}${text}`;
   });
 
   return header + "\n" + dialogueLines.join("\n") + "\n";

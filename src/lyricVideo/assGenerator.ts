@@ -51,28 +51,80 @@ function msToAssTime(ms: number): string {
     .padStart(5, "0")}`;
 }
 
-function buildASSContent(lines: LyricLine[]): string {
+function wrapTextForStory(text: string, maxWordsPerLine = 6): string {
+  const words = text.trim().split(/\s+/);
+  if (words.length <= maxWordsPerLine) return text;
+  const lines: string[] = [];
+  for (let i = 0; i < words.length; i += maxWordsPerLine) {
+    lines.push(words.slice(i, i + maxWordsPerLine).join(" "));
+  }
+  return lines.join("\\N");
+}
+
+function buildASSContent(
+  lines: LyricLine[],
+  resolution: "big" | "small" = "small"
+): string {
+  const isPortrait = resolution === "small";
+  const resX = isPortrait ? 1080 : 1920;
+  const resY = isPortrait ? 1920 : 1080;
+
+  const fontFamily = "Vazirmatn, Tahoma, Arial, DejaVu Sans, sans-serif";
+
   const header = `[Script Info]
-Title: Lyric Video
+Title: Deybalal Story Lyrics
 ScriptType: v4.00+
-PlayResX: 1920
-PlayResY: 1080
-WrapStyle: 0
+PlayResX: ${resX}
+PlayResY: ${resY}
+WrapStyle: 2
 ScaledBorderAndShadow: yes
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Lyric,Arial,56,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,2.5,1.5,2,40,40,80,1
+Style: StoryActive,${fontFamily},${
+    isPortrait ? 50 : 54
+  },&H00FFFFFF,&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,2.5,3,5,80,80,0,1
+Style: StoryUpcoming,${fontFamily},${
+    isPortrait ? 38 : 40
+  },&H66FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,1.5,2,5,80,80,0,1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text`;
 
-  const dialogueLines = lines.map((line) => {
+  const dialogueLines: string[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]!;
     const start = msToAssTime(line.startMs);
     const end = msToAssTime(line.endMs);
-    const text = line.text.replace(/\n/g, "\\N");
-    return `Dialogue: 0,${start},${end},Lyric,,0,0,0,,${text}`;
-  });
+    const activeText = wrapTextForStory(line.text);
+
+    if (isPortrait) {
+      // Active line placed in upper-middle of Lyrics Box (center: X=540, Y=810)
+      dialogueLines.push(
+        `Dialogue: 1,${start},${end},StoryActive,,0,0,0,,{\\an5\\pos(540,810)\\fad(220,220)}${activeText}`
+      );
+
+      // Upcoming next line placed below active line (center: X=540, Y=930)
+      if (lines[i + 1]) {
+        const nextText = wrapTextForStory(lines[i + 1]!.text);
+        dialogueLines.push(
+          `Dialogue: 0,${start},${end},StoryUpcoming,,0,0,0,,{\\an5\\pos(540,930)\\fad(220,220)}${nextText}`
+        );
+      }
+    } else {
+      // Landscape lyrics placement
+      dialogueLines.push(
+        `Dialogue: 1,${start},${end},StoryActive,,0,0,0,,{\\an5\\pos(1340,510)\\fad(220,220)}${activeText}`
+      );
+      if (lines[i + 1]) {
+        const nextText = wrapTextForStory(lines[i + 1]!.text);
+        dialogueLines.push(
+          `Dialogue: 0,${start},${end},StoryUpcoming,,0,0,0,,{\\an5\\pos(1340,620)\\fad(220,220)}${nextText}`
+        );
+      }
+    }
+  }
 
   return header + "\n" + dialogueLines.join("\n") + "\n";
 }
@@ -81,7 +133,8 @@ export async function generateASSFile(
   syncedLyrics: string,
   jobDir: string,
   cropStartMs = 0,
-  cropEndMs?: number
+  cropEndMs?: number,
+  resolution: "big" | "small" = "small"
 ): Promise<string | null> {
   const parsed = parseLRC(syncedLyrics);
 
@@ -107,7 +160,7 @@ export async function generateASSFile(
     return null;
   }
 
-  const assContent = buildASSContent(lines);
+  const assContent = buildASSContent(lines, resolution);
   const assPath = path.join(jobDir, "lyrics.ass");
   await writeFile(assPath, assContent, "utf-8");
 

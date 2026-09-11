@@ -44,17 +44,19 @@ export async function cropAudio(
   const durationSec = (endMs - startMs) / 1000;
 
   const result = await runFFmpeg([
-    "-i",
-    inputPath,
     "-ss",
     startSec.toFixed(3),
     "-t",
     durationSec.toFixed(3),
+    "-i",
+    inputPath,
     "-vn",
-    "-acodec",
+    "-c:a",
     "libmp3lame",
-    "-q:a",
-    "2",
+    "-b:a",
+    "192k",
+    "-af",
+    "aresample=async=1:first_pts=0",
     outputPath,
   ]);
 
@@ -215,25 +217,15 @@ export async function renderFinal(
   const width = resolution === "big" ? 1920 : 1080;
   const height = resolution === "big" ? 1080 : 1920;
 
-  const watermark =
-    "drawtext=text='@deybalalir':" +
-    "fontcolor=white@0.75:" +
-    "fontsize=42:" +
-    "x=(w-text_w)/2:" +
-    "y=100:" +
-    "borderw=2:" +
-    "bordercolor=black@0.6";
-
   let videoFilters: string[] = [];
+
+  videoFilters.push(`scale=${width}:${height}`);
 
   if (assPath) {
     videoFilters.push(
       `ass='${assPath.replace(/\\/g, "/").replace(/:/g, "\\:")}'`
     );
   }
-  videoFilters.push(watermark);
-
-  videoFilters.push(`scale=${width}:${height}`);
 
   const filter = videoFilters.join(",");
 
@@ -256,6 +248,8 @@ export async function renderFinal(
     "aac",
     "-b:a",
     "192k",
+    "-af",
+    "aresample=async=1:first_pts=0",
     "-shortest",
     "-movflags",
     "+faststart",

@@ -227,40 +227,36 @@ async function prepareSongCoverImage(
   song: any,
   jobDir: string,
   resolution: "big" | "small" = "small",
-  bot: Bot
+  bot: Bot,
+  clipStartSec = 0,
+  clipEndSec = 15
 ): Promise<string> {
   return await createStoryCardInBot(
     song,
     jobDir,
     resolution,
     bot,
-    downloadTelegramFile
+    downloadTelegramFile,
+    clipStartSec,
+    clipEndSec
   );
 }
 
 /**
  * Ultra-fast single-pass video renderer for Story Cards.
  * Encodes image + audio + subtitles directly into the final MP4 in ~2-3 seconds,
- * eliminating the slow multi-pass slideshow and zoompan bottlenecks.
+ * eliminating the slow multi-pass slideshow, zoompan, and drawtext font bottlenecks.
  */
 async function renderSingleCardVideo(
   imagePath: string,
   audioPath: string,
   outputPath: string,
   assPath: string | null,
-  resolution: "big" | "small" = "small"
+  resolution: "big" | "small" = "small",
+  durationSec = 15
 ): Promise<void> {
   const width = resolution === "big" ? 1920 : 1080;
   const height = resolution === "big" ? 1080 : 1920;
-
-  const watermark =
-    "drawtext=text='@deybalalir':" +
-    "fontcolor=white@0.75:" +
-    "fontsize=42:" +
-    "x=(w-text_w)/2:" +
-    "y=100:" +
-    "borderw=2:" +
-    "bordercolor=black@0.6";
 
   const filters: string[] = [
     `scale=${width}:${height}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1`,
@@ -268,7 +264,6 @@ async function renderSingleCardVideo(
   if (assPath) {
     filters.push(`ass='${assPath.replace(/\\/g, "/").replace(/:/g, "\\:")}'`);
   }
-  filters.push(watermark);
 
   const filterStr = filters.join(",");
 
@@ -293,7 +288,13 @@ async function renderSingleCardVideo(
     "aac",
     "-b:a",
     "192k",
+    "-af",
+    "aresample=async=1:first_pts=0",
+    "-t",
+    durationSec.toFixed(3),
     "-shortest",
+    "-movflags",
+    "+faststart",
     outputPath,
   ];
 
@@ -347,6 +348,8 @@ export async function executeStoryRendering(
     );
     await cropAudio(rawAudioPath, audioPath, state.startMs, state.endMs);
 
+    const durationSec = Math.round((state.endMs - state.startMs) / 1000);
+
     // Generate Subtitles (ASS) based on selected lyrics type
     let assPath: string | null = null;
     if (state.lyricsType === "synced" && song.syncedLyrics) {
@@ -360,7 +363,8 @@ export async function executeStoryRendering(
         song.syncedLyrics,
         jobDir,
         state.startMs,
-        state.endMs
+        state.endMs,
+        state.resolution ?? "small"
       );
     } else if (state.lyricsType === "simple" && song.lyrics) {
       await updateStoryProgress(
@@ -392,7 +396,8 @@ export async function executeStoryRendering(
         audioPath,
         outputPath,
         assPath,
-        state.resolution ?? "small"
+        state.resolution ?? "small",
+        durationSec
       );
     } else {
       // Multi-image custom photos path
@@ -436,7 +441,6 @@ export async function executeStoryRendering(
     const thumbPath = path.join(jobDir, "thumb.jpg");
     await generateThumbnail(outputPath, thumbPath);
 
-    const durationSec = Math.round((state.endMs - state.startMs) / 1000);
     const lyricsNote =
       state.lyricsType === "synced" ? "✨ متن همگام‌سازی شده" : "📝 متن ترانه";
 
@@ -502,7 +506,9 @@ export function registerStoryVideoCallbacks(bot: Bot): void {
         song,
         state.jobDir,
         resolution,
-        bot
+        bot,
+        Math.round(state.startMs / 1000),
+        Math.round(state.endMs / 1000)
       );
 
       state.images = [coverPath];
