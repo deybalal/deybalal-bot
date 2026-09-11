@@ -43,8 +43,8 @@ function buildSimpleASSContent(
   const isPortrait = resolution === "small";
   const playResX = isPortrait ? 1080 : 1920;
   const playResY = isPortrait ? 1920 : 1080;
-  const fontSize = isPortrait ? 46 : 52;
-  const fontFamily = "Vazirmatn, Tahoma, Arial, DejaVu Sans, sans-serif";
+  const fontSize = isPortrait ? 48 : 52;
+  const fontName = "DejaVu Sans";
   const endTimeStr = msToAssTime((clipDurationSec + 5) * 1000);
 
   const header = `[Script Info]
@@ -57,8 +57,15 @@ ScaledBorderAndShadow: yes
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: StorySimple,${fontFamily},${fontSize},&H00FFFFFF,&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,2.5,3,5,80,80,0,1
-Style: CardUi,${fontFamily},32,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,1.5,1.5,5,40,40,0,1
+Style: StorySimple,${fontName},${fontSize},&H00FFFFFF,&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,2.5,3,5,80,80,0,1
+Style: CardTitle,${fontName},34,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,1.5,1.5,6,40,40,0,1
+Style: CardArtist,${fontName},26,&H40FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,1.5,1.5,6,40,40,0,1
+Style: CardBadge,${fontName},30,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,1.5,1.5,6,40,40,0,1
+Style: CardUrl,${fontName},22,&H33FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,1.2,1.2,4,40,40,0,1
+Style: CardQuote,${fontName},80,&H5994EC,&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,0,0,6,40,40,0,1
+Style: CardTimeLeft,${fontName},26,&H40FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,1.2,1.2,4,40,40,0,1
+Style: CardTimeRight,${fontName},26,&H40FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,1.2,1.2,6,40,40,0,1
+Style: CardWatermark,${fontName},32,&H40FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,1.5,1.5,5,40,40,0,1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text`;
@@ -69,56 +76,62 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text`
   if (song && isPortrait) {
     const cleanTitle = (song.title || "آهنگ لری")
       .replace(/\\/g, "")
-      .slice(0, 25);
+      .slice(0, 32);
     const cleanArtist = (song.artist || "دی بلال")
       .replace(/\\/g, "")
-      .slice(0, 30);
+      .slice(0, 32);
     const startProgressStr = formatDurationSec(clipStartSec);
     const totalDurationStr = formatDurationSec(song.duration || 210);
 
     // Top Header Badge
     dialogueLines.push(
-      `Dialogue: 0,0:00:00.00,${endTimeStr},CardUi,,0,0,0,,{\\an6\\pos(720,156)\\fs30\\b1}دی بلال`
+      `Dialogue: 0,0:00:00.00,${endTimeStr},CardBadge,,0,0,0,,{\\pos(720,156)}دی بلال`
     );
     dialogueLines.push(
-      `Dialogue: 0,0:00:00.00,${endTimeStr},CardUi,,0,0,0,,{\\an4\\pos(410,157)\\fs22\\c&HCCFFFFFF&}deybalal.ir`
+      `Dialogue: 0,0:00:00.00,${endTimeStr},CardUrl,,0,0,0,,{\\pos(410,157)}deybalal.ir`
     );
 
     // Mini Song Pill: Title & Artist
     dialogueLines.push(
-      `Dialogue: 0,0:00:00.00,${endTimeStr},CardUi,,0,0,0,,{\\an6\\pos(790,285)\\fs34\\b1}${cleanTitle}`
+      `Dialogue: 0,0:00:00.00,${endTimeStr},CardTitle,,0,0,0,,{\\pos(790,285)}${cleanTitle}`
     );
     dialogueLines.push(
-      `Dialogue: 0,0:00:00.00,${endTimeStr},CardUi,,0,0,0,,{\\an6\\pos(790,325)\\fs26\\c&HBFFFFFFF&}${cleanArtist}`
+      `Dialogue: 0,0:00:00.00,${endTimeStr},CardArtist,,0,0,0,,{\\pos(790,325)}${cleanArtist}`
     );
 
     // Pink quotation mark inside the Lyrics Box
     dialogueLines.push(
-      `Dialogue: 0,0:00:00.00,${endTimeStr},CardUi,,0,0,0,,{\\an6\\pos(960,490)\\fnGeorgia\\fs85\\i1\\c&H5994EC&}“`
+      `Dialogue: 0,0:00:00.00,${endTimeStr},CardQuote,,0,0,0,,{\\pos(960,490)}“`
     );
 
     // Timestamps below Progress Bar
     dialogueLines.push(
-      `Dialogue: 0,0:00:00.00,${endTimeStr},CardUi,,0,0,0,,{\\an4\\pos(170,1378)\\fnmonospace\\fs26\\c&HBBFFFFFF&}${startProgressStr}`
+      `Dialogue: 0,0:00:00.00,${endTimeStr},CardTimeLeft,,0,0,0,,{\\pos(170,1378)}${startProgressStr}`
     );
     dialogueLines.push(
-      `Dialogue: 0,0:00:00.00,${endTimeStr},CardUi,,0,0,0,,{\\an6\\pos(910,1378)\\fnmonospace\\fs26\\c&HBBFFFFFF&}${totalDurationStr}`
+      `Dialogue: 0,0:00:00.00,${endTimeStr},CardTimeRight,,0,0,0,,{\\pos(910,1378)}${totalDurationStr}`
     );
 
     // Footer Branding
     dialogueLines.push(
-      `Dialogue: 0,0:00:00.00,${endTimeStr},CardUi,,0,0,0,,{\\an5\\pos(540,1600)\\fs32\\c&HB0FFFFFF&}@deybalalir`
+      `Dialogue: 0,0:00:00.00,${endTimeStr},CardWatermark,,0,0,0,,{\\pos(540,1600)}@deybalalir`
     );
   }
 
-  for (const entry of entries) {
-    const start = msToAssTime(entry.startMs);
-    const end = msToAssTime(entry.endMs);
-    const text = entry.text.replace(/\n/g, "\\N");
-    const pos = isPortrait ? "\\an5\\pos(540,850)" : "\\an5\\pos(1340,540)";
+  if (entries.length === 0) {
     dialogueLines.push(
-      `Dialogue: 1,${start},${end},StorySimple,,0,0,0,,{${pos}\\fad(250,250)}${text}`
+      `Dialogue: 1,0:00:00.00,${endTimeStr},StorySimple,,0,0,0,,{\\pos(540,820)}🎵`
     );
+  } else {
+    for (const entry of entries) {
+      const start = msToAssTime(entry.startMs);
+      const end = msToAssTime(entry.endMs);
+      const text = entry.text.replace(/\n/g, "\\N");
+      const pos = isPortrait ? "\\pos(540,820)" : "\\pos(1340,540)";
+      dialogueLines.push(
+        `Dialogue: 1,${start},${end},StorySimple,,0,0,0,,{${pos}\\fad(250,250)}${text}`
+      );
+    }
   }
 
   return header + "\n" + dialogueLines.join("\n") + "\n";

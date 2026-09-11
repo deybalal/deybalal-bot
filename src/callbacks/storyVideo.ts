@@ -256,7 +256,11 @@ export async function executeStoryRendering(
 
     // Generate Subtitles (ASS) based on selected lyrics type
     let assPath: string | null = null;
-    if (state.lyricsType === "synced" && song.syncedLyrics) {
+    if (
+      state.lyricsType === "synced" &&
+      song.syncedLyrics &&
+      song.syncedLyrics.trim()
+    ) {
       await updateStoryProgress(
         bot,
         chatId,
@@ -274,7 +278,7 @@ export async function executeStoryRendering(
           duration: song.duration,
         }
       );
-    } else if (state.lyricsType === "simple" && song.lyrics) {
+    } else if (song.lyrics && song.lyrics.trim()) {
       await updateStoryProgress(
         bot,
         chatId,
