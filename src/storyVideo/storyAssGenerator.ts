@@ -90,7 +90,7 @@ export function buildStoryASSContent(
   totalSongSec: number,
   includeCardText = true
 ): string {
-  const fontName = "DejaVu Sans";
+  const fontName = "Vazirmatn";
   const endTimeStr = msToAssTime((clipDurationSec + 5) * 1000);
 
   const header = `[Script Info]
