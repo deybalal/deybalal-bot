@@ -103,8 +103,7 @@ ScaledBorderAndShadow: yes
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: StoryActive,${fontName},52,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,2.5,3,5,80,80,0,1
-Style: StoryUpcoming,${fontName},40,&H66FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,1.5,2,5,80,80,0,1
+Style: StoryActive,${fontName},54,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,2.5,3,5,80,80,0,1
 Style: CardTitle,${fontName},34,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,1.5,1.5,6,40,40,0,1
 Style: CardArtist,${fontName},26,&H40FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,1.5,1.5,6,40,40,0,1
 Style: CardBadge,${fontName},30,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,1.5,1.5,6,40,40,0,1
@@ -165,10 +164,10 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text`
     );
   }
 
-  // Dynamic Synced Lyrics
+  // Dynamic Synced Lyrics (single line centered in Lyrics Box)
   if (lines.length === 0) {
     dialogueLines.push(
-      `Dialogue: 1,0:00:00.00,${endTimeStr},StoryActive,,0,0,0,,{\\pos(540,820)}🎵`
+      `Dialogue: 1,0:00:00.00,${endTimeStr},StoryActive,,0,0,0,,{\\pos(540,850)}🎵`
     );
   } else {
     for (let i = 0; i < lines.length; i++) {
@@ -177,18 +176,10 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text`
       const end = msToAssTime(line.endMs);
       const activeText = wrapLine(line.text);
 
-      // Active line: upper-center of Lyrics Box
+      // Single active line centered in Lyrics Box
       dialogueLines.push(
-        `Dialogue: 2,${start},${end},StoryActive,,0,0,0,,{\\pos(540,780)\\fad(220,220)}${activeText}`
+        `Dialogue: 2,${start},${end},StoryActive,,0,0,0,,{\\pos(540,850)\\fad(220,220)}${activeText}`
       );
-
-      // Upcoming line: below active line
-      if (lines[i + 1]) {
-        const nextText = wrapLine(lines[i + 1]!.text);
-        dialogueLines.push(
-          `Dialogue: 1,${start},${end},StoryUpcoming,,0,0,0,,{\\pos(540,900)\\fad(220,220)}${nextText}`
-        );
-      }
     }
   }
 

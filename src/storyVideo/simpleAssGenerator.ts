@@ -127,7 +127,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text`
       const start = msToAssTime(entry.startMs);
       const end = msToAssTime(entry.endMs);
       const text = entry.text.replace(/\n/g, "\\N");
-      const pos = isPortrait ? "\\pos(540,820)" : "\\pos(1340,540)";
+      const pos = isPortrait ? "\\pos(540,850)" : "\\pos(1340,540)";
       dialogueLines.push(
         `Dialogue: 1,${start},${end},StorySimple,,0,0,0,,{${pos}\\fad(250,250)}${text}`
       );
