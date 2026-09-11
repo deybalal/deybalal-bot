@@ -201,6 +201,12 @@ export function registerStartCommand(bot: Bot) {
       return;
     }
 
+    // Format: clip_<songId>_<start>_<end>_<lyricsType> or v_<songId>_<start>_<end>_<lyricsType>
+    if (ctx.match?.startsWith("clip_") || ctx.match?.startsWith("v_")) {
+      const { handleStoryVideoStart } = await import("../callbacks/storyVideo");
+      return await handleStoryVideoStart(ctx, ctx.match);
+    }
+
     if (ctx.match?.startsWith("s_")) {
       const songId = ctx.match.substring(2);
 
