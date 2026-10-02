@@ -1,0 +1,453 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Song {
+  id                  String             @id @default(cuid())
+  slug                String             @unique 
+  title               String             
+  titleEn             String             
+  artist              String             
+  artistEn            String             
+  albumName           String?
+  coverArt            String?
+  year                Int                @default(0)
+  duration            Int                @default(0)
+  uri                 String
+  filename            String?
+  index               Int                @default(0)
+  lyrics              String?            
+  syncedLyrics        String?            
+  playCount           Int                @default(0)
+  isDisabled          Boolean            @default(false)
+  disabledDescription String?
+  isActive            Boolean            @default(false)
+  isFeatured          Boolean            @default(false)
+  albumId             String?
+  userId              String
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  lyricsSource        String?
+  lyricsSourceUrl     String?
+  links               Json?              
+  ogg                 String?
+  comments            Comment[]
+  contributors        Contributor[]
+  suggestions         LyricsSuggestion[]
+  playHistory         PlayHistory[]
+  album               Album?             @relation(fields: [albumId], references: [id])
+  user                User               @relation(fields: [userId], references: [id])
+  crew                SongCrew[]
+  artists             Artist[]           @relation("ArtistToSong")
+  genres              Genre[]            @relation("GenreToSong")
+  playlists           PlaylistSong[]
+
+  similarSongs Song[] @relation("SongSimilarity")
+  similarTo    Song[] @relation("SongSimilarity")
+
+  radioTracks RadioTrack[]
+  telegram    Telegram?
+
+  @@index([index])
+  @@index([title])
+  @@index([artist])
+  @@index([albumId])
+  @@index([createdAt])
+  @@index([slug])
+}
+
+model SongCrew {
+  id     String @id @default(cuid())
+  songId String
+  role   String
+  name   String
+  song   Song   @relation(fields: [songId], references: [id], onDelete: Cascade)
+
+  @@index([songId])
+}
+
+model Album {
+  id           String    @id @default(cuid())
+  name         String
+  artistName   String
+  artistNameEn String
+  coverArt     String?
+  releaseDate  Int?
+  duration     Int       @default(0)
+  isActive     Boolean   @default(true)
+  isFeatured   Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  artistId     String?
+  userId       String
+  artist       Artist?   @relation(fields: [artistId], references: [id])
+  user         User      @relation(fields: [userId], references: [id])
+  comments     Comment[]
+  songs        Song[]
+  genres       Genre[]   @relation("AlbumToGenre")
+
+  @@index([artistName])
+  @@index([artistId])
+}
+
+model Playlist {
+  id          String         @id @default(cuid())
+  name        String
+  description String?
+  coverArt    String?
+  duration    Int            @default(0)
+  isFavorite  Boolean        @default(false)
+  isDownload  Boolean        @default(false)
+  isPrivate   Boolean        @default(true)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  userId      String
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  songs       PlaylistSong[]
+
+  @@index([createdAt])
+  @@index([isFavorite])
+  @@index([userId])
+}
+
+model Artist {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  nameEn      String?
+  image       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  isVerified  Boolean  @default(false)
+  albums      Album[]
+  followers   Follow[]
+  users       User[]
+  description String?  
+  songs       Song[]   @relation("ArtistToSong")
+
+  userId      String?
+  user        User?   @relation("ArtistCreator", fields: [userId], references: [id])
+  ig          String?
+  igFollowers Int?
+
+  fileId       String?
+  fileUniqueId String?
+
+  @@index([igFollowers])
+  @@index([nameEn])
+  @@index([userId])
+}
+
+model Follow {
+  id        String   @id @default(cuid())
+  userId    String
+  artistId  String
+  createdAt DateTime @default(now())
+  artist    Artist   @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, artistId])
+  @@index([userId])
+  @@index([artistId])
+}
+
+model Comment {
+  id        String    @id @default(cuid())
+  content   String
+  userId    String
+  userSlug  String
+  songId    String?
+  albumId   String?
+  postTitle String
+  isActive  Boolean   @default(false)
+  isDeleted Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  album     Album?    @relation(fields: [albumId], references: [id], onDelete: Cascade)
+  song      Song?     @relation(fields: [songId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parentId  String?
+  parent    Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   Comment[] @relation("CommentReplies")
+
+  @@index([userId])
+  @@index([songId])
+  @@index([albumId])
+  @@index([parentId])
+}
+
+model LyricsSuggestion {
+  id              String           @id @default(cuid())
+  songId          String
+  userId          String
+  lyrics          String?
+  syncedLyrics    String?
+  status          SuggestionStatus @default(PENDING)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  type            SuggestionType   @default(LYRICS)
+  lyricsSource    String?
+  lyricsSourceUrl String?
+  song            Song             @relation(fields: [songId], references: [id], onDelete: Cascade)
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([songId])
+  @@index([userId])
+  @@index([status])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String
+  title     String
+  message   String
+  link      String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isRead])
+}
+
+model User {
+  id                 String             @id
+  name               String
+  email              String             @unique
+  emailVerified      Boolean            @default(false)
+  image              String?
+  bio                String             @default("")
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  isPrivate          Boolean            @default(false)
+  isBanned           Boolean            @default(false)
+  artistId           String?
+  userIndex          Int                @unique @default(autoincrement())
+  userSlug           String             @unique @default(nanoid(10)) 
+  instagramHandle    String?
+  telegramId         Int?               @unique
+  telegramUsername   String?
+  telegramFirstName  String?
+  telegramLastName   String?
+  role               Role               @default(user)
+  isVerified         Boolean            @default(false)
+  isUserAnArtist     Boolean            @default(false)
+  downloadPreference Int                @default(128)
+  albums             Album[]
+  comments           Comment[]
+  contributors       Contributor[]
+  follows            Follow[]
+  suggestions        LyricsSuggestion[]
+  notifications      Notification[]
+  playHistory        PlayHistory[]
+  playlists          Playlist[]
+  songs              Song[]
+  badges             UserBadge[]
+  accounts           Account[]
+  sessions           Session[]
+  artist             Artist?            @relation(fields: [artistId], references: [id])
+
+  createdArtists Artist[] @relation("ArtistCreator")
+
+  @@map("user")
+}
+
+model Contributor {
+  id         String   @id @default(cuid())
+  songId     String
+  userId     String
+  type       String
+  percentage Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  song       Song     @relation(fields: [songId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([songId, userId, type])
+  @@index([songId])
+  @@index([userId])
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+model Genre {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  albums    Album[]  @relation("AlbumToGenre")
+  songs     Song[]   @relation("GenreToSong")
+
+  @@index([slug])
+}
+
+model PlayHistory {
+  id       String   @id @default(cuid())
+  userId   String
+  songId   String
+  playedAt DateTime @default(now())
+  song     Song     @relation(fields: [songId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([songId])
+  @@index([playedAt])
+}
+
+model Badge {
+  id          String      @id @default(cuid())
+  name        String      @unique
+  description String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  users       UserBadge[]
+}
+
+model UserBadge {
+  id        String   @id @default(cuid())
+  userId    String
+  badgeId   String
+  awardedAt DateTime @default(now())
+  badge     Badge    @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, badgeId])
+  @@index([userId])
+  @@index([badgeId])
+}
+
+enum Role {
+  user
+  moderator
+  administrator
+}
+
+enum SuggestionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum SuggestionType {
+  LYRICS
+  SYNCED
+}
+
+model RadioPlaylist {
+  id            String       @id @default(cuid())
+  date          DateTime     @unique // The day this playlist is for (at 00:00:00 UTC)
+  startTime     DateTime // The exact start time (usually same as date)
+  totalDuration Int // Total duration in seconds
+  tracks        RadioTrack[]
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@index([date])
+}
+
+model RadioTrack {
+  id          String        @id @default(cuid())
+  playlistId  String
+  songId      String
+  order       Int
+  duration    Int // Duration in seconds
+  startOffset Int // Cumulative offset in seconds from playlist start
+  playlist    RadioPlaylist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  song        Song          @relation(fields: [songId], references: [id], onDelete: Cascade)
+
+  @@index([playlistId])
+  @@index([songId])
+}
+
+model PlaylistSong {
+  playlistId String
+  songId     String
+  addedAt    DateTime @default(now())
+  playlist   Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  song       Song     @relation(fields: [songId], references: [id], onDelete: Cascade)
+
+  @@id([playlistId, songId])
+  @@index([playlistId])
+  @@index([songId])
+  @@index([addedAt])
+}
+
+model Telegram {
+  id     String @id @default(cuid())
+  songId String @unique
+  song   Song   @relation(fields: [songId], references: [id], onDelete: Cascade)
+
+  file_id_64         String?
+  file_unique_id_64  String?
+  file_id_128        String?
+  file_unique_id_128 String?
+  file_id_320        String?
+  file_unique_id_320 String?
+  file_id_ogg        String?
+  file_unique_id_ogg String?
+
+  cover_art_file_id        String?
+  cover_art_file_unique_id String?
+
+  ogg_file_id        String?
+  ogg_file_unique_id String?
+
+  has_posted     Boolean @default(false)
+  message_id     Int?
+  ogg_message_id Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([songId])
+}

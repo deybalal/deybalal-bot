@@ -1,61 +1,49 @@
-export type Song = {
+export interface TelegramFile {
+  songId: string;
+  type: string;
+  quality: string;
+  fileId: string;
+  file_id: string;
+  fileUniqueId: string;
+  file_unique_id: string;
+  uploadedAt?: number | Date;
+}
+
+export interface Song {
   id: string;
   slug: string;
   title: string;
   titleEn?: string | null;
   artist: string;
   artistEn?: string | null;
-  artists: {
-    id: string;
-    name: string;
-    nameEn: string;
-    fileId?: string;
-    uniqueFileId?: string;
-  }[];
-  has_posted: number;
-  message_id?: number | null;
-  ogg_message_id?: number | null;
+  artists?: any;
   albumName?: string | null;
-  coverArt: string;
+  coverArt?: string | null;
   year: number;
   duration: number;
   uri: string;
-  filename: string;
-  songIndex: number;
+  filename?: string | null;
+  songIndex?: number;
+  index?: number;
   lyrics?: string | null;
   syncedLyrics?: string | null;
   playCount: number;
-  downloads: number;
-  isDisabled: boolean;
+  downloads?: number;
+  isDisabled: boolean | number;
   disabledDescription?: string | null;
-  isActive: boolean;
-  isFeatured: boolean;
+  isActive: boolean | number;
+  isFeatured: boolean | number;
   albumId?: string | null;
-  userId?: string | null;
+  userId?: string;
   lyricsSource?: string | null;
   lyricsSourceUrl?: string | null;
-  ogg: string;
-  tempFilename?: string | null;
-  link64?: string | null;
-  bytes64?: number | null;
-  link128?: string | null;
-  bytes128?: number | null;
-  link320?: string | null;
-  bytes320?: number | null;
-  createdAt: number;
-  updatedAt: number;
-};
+  ogg?: string | null;
+  links?: any;
+  createdAt?: number | Date;
+  updatedAt?: number | Date;
+}
 
-export type TelegramFile = {
-  songId: string;
-  type: string;
-  quality?: string | null;
-  fileId?: string | null;
-  fileUniqueId?: string | null;
-  uploadedAt?: number | null;
-};
-
-export type TelegramSongWithFiles = Song & {
+export interface TelegramSongWithFiles extends Song {
   telegram: {
     coverArt: TelegramFile | null;
     ogg: TelegramFile | null;
@@ -63,127 +51,35 @@ export type TelegramSongWithFiles = Song & {
     "128": TelegramFile | null;
     "320": TelegramFile | null;
   };
-};
-
-export type ExportedSong = {
-  links: any;
-  id: string;
-  slug: string;
-  title: string;
-  titleEn?: string | null;
-  artist: string;
-  artistEn?: string | null;
-  artists: {
-    id: string;
-    name: string;
-    nameEn: string;
-    fileId?: string;
-    uniqueFileId?: string;
-  }[];
-  post: {
-    has_posted: boolean;
-    message_id?: number | null;
-    ogg_message_id?: number | null;
-  };
-  albumName?: string | null;
-  coverArt: string;
-  year: number;
-  duration: number;
-  uri: string;
-  filename: string;
-  index: number;
-  lyrics?: string | null;
-  syncedLyrics?: string | null;
-  playCount: number;
-  downloads: number;
-  isDisabled: boolean;
-  disabledDescription?: string | null;
-  isActive: boolean;
-  isFeatured: boolean;
-  albumId?: string | null;
-  userId?: string | null;
-  lyricsSource?: string | null;
-  lyricsSourceUrl?: string | null;
-  ogg: string;
-  tempFilename?: string | null;
-  link64?: string | null;
-  bytes64?: number | null;
-  link128?: string | null;
-  bytes128?: number | null;
-  link320?: string | null;
-  bytes320?: number | null;
-  createdAt: number;
-  updatedAt: number;
-
-  telegram?: {
-    "320": {
-      file_id: string;
-      file_unique_id: string;
-    };
-    "128": {
-      file_id: string;
-      file_unique_id: string;
-    };
-    "64": {
-      file_id: string;
-      file_unique_id: string;
-    };
-    coverArt: {
-      file_id: string;
-      file_unique_id: string;
-    };
-    ogg: {
-      file_id: string;
-      file_unique_id: string;
-    };
-  };
-};
-
-export type LyricVideoState = {
-  songId: string;
-  images: string[];
-  jobDir: string;
-  startMs?: number;
-  endMs?: number;
-  progressMessageId?: number;
-  step: "waiting_images" | "waiting_range" | "rendering" | "waiting_resolution";
-  resolution?: VideoResolution;
-};
-
-export type VideoResolution = "big" | "small";
+}
 
 export interface Artist {
   id: string;
-
   name: string;
-  nameEn?: string;
-
-  image?: string;
-
-  isVerified: boolean;
-
-  ig?: string;
-  description?: string;
-
-  followers: number;
-  telegramFileId?: string;
-  telegramFileUniqueId?: string;
+  nameEn?: string | null;
+  image?: string | null;
+  isVerified?: boolean | number;
+  ig?: string | null;
+  description?: string | null;
+  followers?: number;
+  telegramFileId?: string | null;
+  telegramFileUniqueId?: string | null;
+  fileId?: string | null;
+  fileUniqueId?: string | null;
 }
 
-export interface VideoJob {
-  userId: number;
-  chatId: number;
-
-  songId: string;
-
-  title: string;
-
-  resolve: () => void;
-  reject: (err: Error) => void;
-}
-
-export type SearchResult = {
+export interface SearchResult {
   song: Song;
   reason: "title" | "artist" | "lyrics";
   snippet?: string;
-};
+}
+
+export interface TelegramUser {
+  id: number;
+  is_bot?: boolean;
+  first_name: string;
+  last_name?: string;
+  username?: string;
+  language_code?: string;
+  is_premium?: boolean;
+}

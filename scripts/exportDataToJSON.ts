@@ -1,16 +1,9 @@
-import fs from "fs/promises";
-import path from "path";
-import { db } from "../src/db";
-import type { Song } from "../types/types";
-
-type TelegramEntry = {
-  file_id: string;
-  file_unique_id: string;
-};
+import * as fs from "fs/promises";
+import * as path from "path";
+import { prisma } from "../src/db";
 
 function getTimestamp() {
   const d = new Date();
-
   const pad = (n: number) => String(n).padStart(2, "0");
 
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}_${pad(
@@ -19,126 +12,142 @@ function getTimestamp() {
 }
 
 export async function exportSongsToJson(): Promise<string> {
-  const songs = db
-    .query(`SELECT * FROM songs ORDER BY songIndex ASC`)
-    .all() as Song[];
-
-  const tgFiles = db.query(`SELECT * FROM telegram_files`).all() as any[];
-
-  const telegramMap = new Map<string, Map<string, TelegramEntry>>();
-
-  for (const file of tgFiles) {
-    if (!telegramMap.has(file.songId)) {
-      telegramMap.set(file.songId, new Map());
-    }
-
-    const key = file.type === "audio" ? file.quality : file.type;
-
-    telegramMap.get(file.songId)!.set(key, {
-      file_id: file.fileId,
-      file_unique_id: file.fileUniqueId,
-    });
-  }
-
-  const output = songs.map((song, i) => {
-    const tg = telegramMap.get(song.id);
-
-    return {
-      id: song.id,
-      slug: song.slug,
-
-      title: song.title,
-      titleEn: song.titleEn,
-
-      artist: song.artist,
-      artistEn: song.artistEn,
-      artists: song.artists
-        ? JSON.parse(song.artists as unknown as string)
-        : [],
-
-      albumName: song.albumName,
-
-      coverArt: song.coverArt,
-
-      year: song.year,
-
-      duration: song.duration,
-
-      uri: song.uri,
-      filename: song.filename,
-
-      index: song.songIndex,
-
-      lyrics: song.lyrics,
-      syncedLyrics: song.syncedLyrics,
-
-      playCount: song.playCount,
-      downloads: song.downloads,
-
-      isDisabled: Boolean(song.isDisabled),
-      disabledDescription: song.disabledDescription,
-
-      isActive: Boolean(song.isActive),
-      isFeatured: Boolean(song.isFeatured),
-
-      albumId: song.albumId,
-      userId: song.userId,
-
-      lyricsSource: song.lyricsSource,
-      lyricsSourceUrl: song.lyricsSourceUrl,
-
-      links: {
-        "64": song.link64
-          ? {
-              url: song.link64,
-              bytes: song.bytes64,
-            }
-          : null,
-
-        "128": song.link128
-          ? {
-              url: song.link128,
-              bytes: song.bytes128,
-            }
-          : null,
-
-        "320": song.link320
-          ? {
-              url: song.link320,
-              bytes: song.bytes320,
-            }
-          : null,
-      },
-
-      ogg: song.ogg,
-
-      tempFilename: song.tempFilename,
-
-      telegram: {
-        coverArt: tg?.get("photo") ?? null,
-        "64": tg?.get("64") ?? null,
-        "128": tg?.get("128") ?? null,
-        "320": tg?.get("320") ?? null,
-        ogg: tg?.get("voice") ?? null,
-      },
-
-      post: {
-        has_posted: song.has_posted === 1 ? true : false,
-        message_id: song.message_id,
-        ogg_message_id: song.ogg_message_id,
-      },
-    };
+  const songs = await prisma.song.findMany({
+    orderBy: { index: "asc" },
+    include: {
+      telegram: true,
+      artists: true,
+    },
   });
 
+  const output = songs.map(
+    (song: {
+      telegram: any;
+      id: any;
+      slug: any;
+      title: any;
+      titleEn: any;
+      artist: any;
+      artistEn: any;
+      artists: any[];
+      albumName: any;
+      coverArt: any;
+      year: any;
+      duration: any;
+      uri: any;
+      filename: any;
+      index: any;
+      lyrics: any;
+      syncedLyrics: any;
+      playCount: any;
+      isDisabled: any;
+      disabledDescription: any;
+      isActive: any;
+      isFeatured: any;
+      albumId: any;
+      userId: any;
+      lyricsSource: any;
+      lyricsSourceUrl: any;
+      links: any;
+      ogg: any;
+    }) => {
+      const tg = song.telegram;
+
+      return {
+        id: song.id,
+        slug: song.slug,
+        title: song.title,
+        titleEn: song.titleEn,
+        artist: song.artist,
+        artistEn: song.artistEn,
+        artists: song.artists.map((a) => ({
+          id: a.id,
+          name: a.name,
+          nameEn: a.nameEn,
+          fileId: a.fileId,
+          fileUniqueId: a.fileUniqueId,
+        })),
+        albumName: song.albumName,
+        coverArt: song.coverArt,
+        year: song.year,
+        duration: song.duration,
+        uri: song.uri,
+        filename: song.filename,
+        index: song.index,
+        lyrics: song.lyrics,
+        syncedLyrics: song.syncedLyrics,
+        playCount: song.playCount,
+        downloads: 0,
+        isDisabled: song.isDisabled,
+        disabledDescription: song.disabledDescription,
+        isActive: song.isActive,
+        isFeatured: song.isFeatured,
+        albumId: song.albumId,
+        userId: song.userId,
+        lyricsSource: song.lyricsSource,
+        lyricsSourceUrl: song.lyricsSourceUrl,
+        links: song.links,
+        ogg: song.ogg,
+        telegram: {
+          coverArt: tg?.cover_art_file_id
+            ? {
+                file_id: tg.cover_art_file_id,
+                file_unique_id: tg.cover_art_file_unique_id || "",
+              }
+            : null,
+          "64": tg?.file_id_64
+            ? {
+                file_id: tg.file_id_64,
+                file_unique_id: tg.file_unique_id_64 || "",
+              }
+            : null,
+          "128": tg?.file_id_128
+            ? {
+                file_id: tg.file_id_128,
+                file_unique_id: tg.file_unique_id_128 || "",
+              }
+            : null,
+          "320": tg?.file_id_320
+            ? {
+                file_id: tg.file_id_320,
+                file_unique_id: tg.file_unique_id_320 || "",
+              }
+            : null,
+          ogg:
+            tg?.file_id_ogg || tg?.ogg_file_id
+              ? {
+                  file_id: (tg.file_id_ogg || tg.ogg_file_id)!,
+                  file_unique_id:
+                    tg.file_unique_id_ogg || tg.ogg_file_unique_id || "",
+                }
+              : null,
+        },
+        post: {
+          has_posted: tg?.has_posted ?? false,
+          message_id: tg?.message_id ?? null,
+          ogg_message_id: tg?.ogg_message_id ?? null,
+        },
+      };
+    }
+  );
+
+  const exportDir = path.resolve(process.cwd(), "data");
+  await fs.mkdir(exportDir, { recursive: true });
+
   const filename = `songs-export-${getTimestamp()}.json`;
-  const filePath = path.resolve("./data", filename);
+  const filePath = path.join(exportDir, filename);
 
   await fs.writeFile(filePath, JSON.stringify(output, null, 2), "utf8");
 
   return filePath;
 }
 
-// Run the export
-const savedPath = await exportSongsToJson();
-
-console.log(savedPath);
+if (
+  (typeof import.meta !== "undefined" && (import.meta as any).main) ||
+  process.argv[1]?.includes("exportDataToJSON")
+) {
+  exportSongsToJson()
+    .then((savedPath) => console.log("Saved export to:", savedPath))
+    .catch((err) => console.error("Export error:", err))
+    .finally(() => prisma.$disconnect());
+}
