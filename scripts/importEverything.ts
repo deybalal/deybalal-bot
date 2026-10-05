@@ -145,6 +145,7 @@ interface SongJson {
   lyrics?: string | null;
   syncedLyrics?: string | null;
   playCount?: number;
+  downloads?: number;
   isDisabled?: boolean;
   disabledDescription?: string | null;
   isActive?: boolean;
@@ -886,6 +887,7 @@ async function main(): Promise<void> {
           lyrics: s.lyrics ?? null,
           syncedLyrics: s.syncedLyrics ?? null,
           playCount: s.playCount ?? 0,
+          downloads: s.downloads ?? 0,
           isDisabled: Boolean(s.isDisabled),
           disabledDescription: s.disabledDescription ?? null,
           isActive: Boolean(s.isActive),
@@ -916,6 +918,7 @@ async function main(): Promise<void> {
           lyrics: s.lyrics ?? null,
           syncedLyrics: s.syncedLyrics ?? null,
           playCount: s.playCount ?? 0,
+          downloads: s.downloads ?? 0,
           isDisabled: Boolean(s.isDisabled),
           disabledDescription: s.disabledDescription ?? null,
           isActive: Boolean(s.isActive),
