@@ -107,7 +107,7 @@ export async function handleStoryVideoStart(
   }
 
   const { songId, startSec, endSec, lyricsType } = parsed;
-  const song = getSongById(songId);
+  const song = await getSongById(songId);
 
   if (!song) {
     await ctx.reply(
@@ -225,8 +225,8 @@ export async function executeStoryRendering(
   const outputPath = path.join(jobDir, "output.mp4");
 
   try {
-    const song = getSongById(state.songId);
-    if (!song) throw new Error("آهنگ پیدا نشد.");
+    const song = await getSongById(state.songId);
+    if (!song || !song.telegram) throw new Error("آهنگ پیدا نشد.");
 
     // Prepare Story Card cover image if not already prepared
     if (state.images.length === 0) {
@@ -451,7 +451,7 @@ export function registerStoryVideoCallbacks(bot: Bot): void {
     await ctx.answerCallbackQuery().catch(() => {});
 
     try {
-      const song = getSongById(state.songId);
+      const song = await getSongById(state.songId);
       state.images = [];
       state.resolution = resolution;
       state.step = "rendering";
@@ -580,7 +580,7 @@ export function registerStoryVideoCallbacks(bot: Bot): void {
     await ctx.answerCallbackQuery();
     await ctx.deleteMessage().catch(() => {});
 
-    const song = getSongById(state.songId);
+    const song = await getSongById(state.songId);
     const resLabel =
       resolution === "small"
         ? "📱 عمودی استوری (1080x1920)"

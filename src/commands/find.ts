@@ -4,7 +4,7 @@ import { findInlineBrokenFiles } from "../../scripts/junks/findInlineBrokenFiles
 
 export function registerFindCommand(bot: Bot) {
   bot.command("find", async (ctx) => {
-    const allSongs = getSongs();
+    const allSongs = await getSongs();
     const filteredSongsStartIndex = allSongs.findIndex(
       (song) => song.id === "cmpkwqnsy004a4ggpweorm3ll"
     );

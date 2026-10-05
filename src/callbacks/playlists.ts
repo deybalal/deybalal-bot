@@ -10,7 +10,7 @@ export function registerPlaylistCallbacks(bot: Bot) {
     const start = page * PAGE_SIZE;
     const end = start + PAGE_SIZE;
 
-    const songs = getTopPlayedSongs(50);
+    const songs = await getTopPlayedSongs(50);
 
     if (!songs.length) {
       await ctx.answerCallbackQuery("آهنگی پیدا نشد!");
@@ -71,7 +71,7 @@ export function registerPlaylistCallbacks(bot: Bot) {
     const start = page * PAGE_SIZE;
     const end = start + PAGE_SIZE;
 
-    const songs = getMostDownloadedSongs(50);
+    const songs = await getMostDownloadedSongs(50);
 
     if (!songs.length) {
       await ctx.answerCallbackQuery("آهنگی پیدا نشد!");
@@ -82,9 +82,9 @@ export function registerPlaylistCallbacks(bot: Bot) {
 
     const buttons = pageSongs.map((song) => [
       {
-        text: `🎵 ${song.title} — ${
-          song.artist
-        } [${song.downloads.toLocaleString()} دانلود]`,
+        text: `🎵 ${song.title} — ${song.artist} [${
+          song.downloads?.toLocaleString() || 0
+        } دانلود]`,
         callback_data: `s:${song.id}`,
       },
     ]);

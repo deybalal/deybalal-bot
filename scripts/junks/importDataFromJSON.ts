@@ -1,6 +1,6 @@
-import { db } from "../src/db";
-import songs from "../data/songs-export-2026-07-14_19-38-35.json";
-import type { ExportedSong } from "../types/types";
+import { db } from "../../src/db";
+import songs from "../../data/songs-export-2026-07-14_19-38-35.json";
+import type { ExportedSong } from "../../types/types";
 
 const insertIntoTelegramFiles = db.prepare(`
 INSERT INTO telegram_files (

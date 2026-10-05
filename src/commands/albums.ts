@@ -5,7 +5,7 @@ export function registerAlbumsCommand(bot: Bot) {
   bot.command("albums", async (ctx) => {
     ensureUser(ctx.from!);
 
-    const albums = getAllAlbums();
+    const albums = await getAllAlbums();
 
     if (!albums.length) {
       await ctx.reply("آلبومی پیدا نشد!");

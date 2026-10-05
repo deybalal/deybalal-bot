@@ -5,7 +5,7 @@ export function registerMostplayedCommand(bot: Bot) {
   bot.command("mostplayed", async (ctx) => {
     ensureUser(ctx.from!);
 
-    const songs = getMostDownloadedSongs(50);
+    const songs = await getMostDownloadedSongs(50);
 
     if (!songs.length) {
       await ctx.reply("آهنگی پیدا نشد!");
@@ -21,9 +21,9 @@ export function registerMostplayedCommand(bot: Bot) {
 
     const buttons = pageSongs.map((song) => [
       {
-        text: `🎵 ${song.title} — ${
-          song.artist
-        } [${song.downloads.toLocaleString()} دانلود]`,
+        text: `🎵 ${song.title} — ${song.artist} [${(
+          song.downloads || 0
+        )?.toLocaleString()} دانلود]`,
         callback_data: `s:${song.id}`,
       },
     ]);

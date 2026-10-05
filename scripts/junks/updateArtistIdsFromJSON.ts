@@ -1,6 +1,6 @@
-import { db } from "../src/db";
-import songs from "../data/songsId.json";
-import artists from "../data/artists.json";
+import { db } from "../../src/db";
+import songs from "../../data/songsId.json";
+import artists from "../../data/artists.json";
 
 // Create a lookup map for quick access by artist ID
 const artistMap = new Map(artists.map((artist) => [artist.id, artist]));

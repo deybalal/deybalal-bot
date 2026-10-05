@@ -4,6 +4,7 @@ import type {
   Artist,
   SearchResult,
   Song,
+  SongLinks,
   TelegramFile,
   TelegramSongWithFiles,
   TelegramUser,
@@ -62,6 +63,11 @@ export function formatSongWithTelegram(song: any): TelegramSongWithFiles {
       "64": makeFile("audio", "64", file64Id, file64UniqueId),
       "128": makeFile("audio", "128", file128Id, file128UniqueId),
       "320": makeFile("audio", "320", file320Id, file320UniqueId),
+      message_id: tg?.message_id || null,
+      ogg_message_id: tg?.ogg_message_id || null,
+      has_posted: tg?.has_posted || false,
+      createdAt: tg?.createdAt ? new Date(tg.createdAt).getTime() : undefined,
+      updatedAt: tg?.updatedAt ? new Date(tg.updatedAt).getTime() : undefined,
     },
   };
 }
@@ -188,13 +194,14 @@ export async function ensureUser(user: TelegramUser): Promise<boolean> {
 /**
  * Returns all active, enabled songs ordered by index.
  */
-export async function getSongs(): Promise<Song[]> {
+export async function getSongs(): Promise<TelegramSongWithFiles[]> {
   const songs = await prisma.song.findMany({
     where: { isActive: true, isDisabled: false },
+    include: { telegram: true },
     orderBy: { index: "asc" },
   });
 
-  return songs.map((s) => ({ ...s, songIndex: s.index }));
+  return songs.map(formatSongWithTelegram);
 }
 
 /**
@@ -412,7 +419,11 @@ export async function getSongsByArtistId(artistId: string): Promise<Song[]> {
     orderBy: { title: "asc" },
   });
 
-  return songs.map((s) => ({ ...s, songIndex: s.index }));
+  return songs.map((s) => ({
+    ...s,
+    songIndex: s.index,
+    links: s.links as SongLinks | null,
+  }));
 }
 
 /**
@@ -921,9 +932,7 @@ export async function getRandomSongWithLyrics(): Promise<TelegramSongWithFiles |
     include: { telegram: true },
   });
 
-  const filtered = candidates.filter(
-    (s) => (s.lyrics?.length ?? 0) >= 225
-  );
+  const filtered = candidates.filter((s) => (s.lyrics?.length ?? 0) >= 225);
   if (filtered.length === 0) return null;
 
   const randomSong = filtered[Math.floor(Math.random() * filtered.length)];

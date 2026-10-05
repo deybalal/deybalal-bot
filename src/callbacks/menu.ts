@@ -6,7 +6,7 @@ export function registerMenuCallbacks(bot: Bot) {
   bot.callbackQuery("home", async (ctx) => {
     await ctx.answerCallbackQuery();
 
-    const stats = getStats();
+    const stats = await getStats();
 
     const inline = new InlineKeyboard()
       .text("🎵 موزیک تصادفی", "random")
@@ -43,7 +43,7 @@ export function registerMenuCallbacks(bot: Bot) {
   });
 
   bot.callbackQuery("about", async (ctx) => {
-    const stats = getStats();
+    const stats = await getStats();
 
     const text = `
 🎵 <b>ربات تلگرام دی بلال</b>
@@ -87,7 +87,7 @@ https://github.com/deybalal/deybalal-bot
 
   bot.callbackQuery("settings", async (ctx) => {
     const userId = ctx.from!.id;
-    const quality = getPreferredQuality(userId);
+    const quality = await getPreferredQuality(userId);
 
     const qualityLabels: Record<string, string> = {
       "320": "320 kbps ✓",
@@ -112,7 +112,7 @@ https://github.com/deybalal/deybalal-bot
 
   bot.callbackQuery("settings_quality", async (ctx) => {
     const userId = ctx.from!.id;
-    const quality = getPreferredQuality(userId);
+    const quality = await getPreferredQuality(userId);
 
     const qualityLabels: Record<string, string> = {
       "320": "320 kbps ✓",
@@ -151,7 +151,7 @@ https://github.com/deybalal/deybalal-bot
     const quality = ctx.match[1];
     const userId = ctx.from!.id;
 
-    setPreferredQuality(userId, quality!);
+    await setPreferredQuality(userId, quality!);
 
     await ctx.answerCallbackQuery({
       text: `✅ کیفیت پیش‌فرض روی ${
@@ -160,7 +160,7 @@ https://github.com/deybalal/deybalal-bot
       show_alert: true,
     });
 
-    const newQuality = getPreferredQuality(userId);
+    const newQuality = await getPreferredQuality(userId);
 
     const qualityLabels: Record<string, string> = {
       "320": "320 kbps ✓",

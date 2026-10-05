@@ -19,7 +19,7 @@ export function registerArtistCallbacks(bot: Bot) {
         return;
       }
 
-      const songs = getSongsByArtistId(artistId);
+      const songs = await getSongsByArtistId(artistId);
 
       if (!songs.length) {
         await ctx.answerCallbackQuery("آهنگی برای این هنرمند پیدا نشد!");
@@ -27,7 +27,7 @@ export function registerArtistCallbacks(bot: Bot) {
       }
 
       console.log("songs ", songs.length);
-      const artist = getArtistById(artistId);
+      const artist = await getArtistById(artistId);
 
       const artistName = artist?.name || "هنرمند";
       const artistNameEn = artist?.nameEn || "artist";
@@ -113,7 +113,7 @@ export function registerArtistCallbacks(bot: Bot) {
       return;
     }
 
-    const random = getRandomSongByArtistId(artistId);
+    const random = await getRandomSongByArtistId(artistId);
 
     if (!random) {
       await ctx.answerCallbackQuery("آهنگی پیدا نشد!");

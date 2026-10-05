@@ -97,7 +97,7 @@ export async function handleVoiceIdentification(ctx: Context) {
       .deleteMessage(ctx.chat!.id, processingMessage.message_id)
       .catch(() => {});
 
-    const getSong = getSongById(song.id);
+    const getSong = await getSongById(song.id);
     if (getSong?.telegram?.coverArt?.fileId) {
       await ctx.replyWithPhoto(getSong.telegram.coverArt.fileId, {
         caption,

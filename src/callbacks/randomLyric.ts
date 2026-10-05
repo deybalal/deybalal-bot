@@ -18,7 +18,7 @@ export function registerRandomLyricCallbacks(bot: Bot) {
     await ctx.answerCallbackQuery();
     console.log("Random Lyric query");
 
-    const song: TelegramSongWithFiles | null = getRandomSongWithLyrics();
+    const song: TelegramSongWithFiles | null = await getRandomSongWithLyrics();
 
     if (!song || !song.lyrics) {
       await ctx.answerCallbackQuery("❌ متن آهنگی برای این آهنگ پیدا نشد.");
@@ -35,7 +35,7 @@ export function registerRandomLyricCallbacks(bot: Bot) {
     const MESSAGE_LIMIT = 1020;
 
     if (lyrics.length <= MESSAGE_LIMIT) {
-      await ctx.replyWithPhoto(song.telegram.coverArt?.fileId || "", {
+      await ctx.replyWithPhoto(song.telegram?.coverArt?.fileId || "", {
         caption: `🎵 <a href="https://t.me/deybalalirbot?start=s_${song.id}"><b>${song.title}</b></a> از  <a href="https://t.me/deybalalirbot?start=a_${song.artists[0]?.id}"><b>${song.artist}</b></a>\n\n<i>${lyrics}</i>`,
         parse_mode: "HTML",
         reply_markup: inline,
@@ -64,7 +64,7 @@ export function registerRandomLyricCallbacks(bot: Bot) {
       const isLast = i === chunks.length - 1;
 
       if (i === 0) {
-        await ctx.replyWithPhoto(song.telegram.coverArt?.fileId || "", {
+        await ctx.replyWithPhoto(song.telegram?.coverArt?.fileId || "", {
           caption: `🎵 <b>${song.title}</b>\n\n ${i + 1}/${
             chunks.length
           }\n\n<i>${chunk}</i>`,

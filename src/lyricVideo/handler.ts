@@ -47,7 +47,7 @@ export async function startLyricVideo(
   songId: string
 ): Promise<void> {
   const userId = ctx.from!.id;
-  const song = getSongById(songId);
+  const song = await getSongById(songId);
 
   if (!song) {
     await ctx.answerCallbackQuery("❌ آهنگ پیدا نشد.");
@@ -167,7 +167,7 @@ async function processMediaGroup(
   state.step = "waiting_range";
   setState(userId, state);
 
-  const song = getSongById(state.songId);
+  const song = await getSongById(state.songId);
   const durationStr = song ? formatMs(song.duration * 1000) : "نامشخص";
 
   await ctx.reply(
@@ -242,7 +242,7 @@ export async function handleDoneButton(
 
   await ctx.answerCallbackQuery("✅ دریافت تصاویر تأیید شد.");
 
-  const song = getSongById(state.songId);
+  const song = await getSongById(state.songId);
   const durationStr = song ? formatMs(song.duration * 1000) : "نامشخص";
 
   state.step = "waiting_range";
@@ -281,7 +281,7 @@ export async function handleRangeInput(ctx: Context): Promise<boolean> {
   try {
     const { startMs, endMs } = parseTimeRange(text);
 
-    const song = getSongById(state.songId);
+    const song = await getSongById(state.songId);
     if (song) {
       const maxMs = song.duration * 1000;
       if (endMs > maxMs) {
@@ -348,8 +348,8 @@ export async function executeRendering(
   const outputPath = path.join(jobDir, "output.mp4");
 
   try {
-    const song = getSongById(state.songId);
-    if (!song) {
+    const song = await getSongById(state.songId);
+    if (!song || !song.telegram) {
       throw new Error("آهنگ پیدا نشد.");
     }
 

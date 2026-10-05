@@ -15,7 +15,7 @@ export function registerSearchCommand(bot: Bot) {
       return;
     }
 
-    const songs = searchSongs(query);
+    const songs = await searchSongs(query);
 
     if (songs.length === 0) {
       await ctx.reply(`🔍 نتیجه‌ای برای "<b>${query}</b>" پیدا نشد.`, {

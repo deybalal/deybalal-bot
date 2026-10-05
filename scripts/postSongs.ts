@@ -32,7 +32,7 @@ let todayPosts: PostTime[] = [];
 let scheduledTasks: ScheduledTask[] = []; // <-- track today's jobs
 
 async function postRandomSong() {
-  const songs = getUnpostedSongs();
+  const songs = await getUnpostedSongs();
   if (!songs.length) {
     console.log("No songs available");
     return;
@@ -59,7 +59,7 @@ async function postRandomSong() {
         caption: `🎧 ${song.title} - ${song.artist}\n\n کیفیت 128 \n\nدانلود با کیفیت عالی:\nhttps://t.me/deybalalirbot?start=s_${song.id}`,
       }
     );
-    updateSongWithPostDetails(
+    await updateSongWithPostDetails(
       song.id,
       coverMessage.message_id,
       oggMessage.message_id,

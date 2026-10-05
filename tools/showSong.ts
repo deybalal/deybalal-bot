@@ -12,7 +12,7 @@ export async function showSong(
   void Promise.resolve().then(() => incrementSongPlayCount(song.id));
   const userId = ctx.from?.id;
 
-  const isSongInFavorites = isFavorite(userId || 0, song.id);
+  const isSongInFavorites = await isFavorite(userId || 0, song.id);
 
   const text = `
 🎵 <b>${song.title}</b>
@@ -22,16 +22,22 @@ export async function showSong(
 📊 <b>بازدید:</b> ${(song.playCount ?? 0).toLocaleString()}
 💾 <b>دانلودها:</b> ${(song.downloads ?? 0).toLocaleString()}
 ${
-  song.has_posted
-    ? `\n<a href="https://t.me/deybalalir/${song.message_id}">مشاهده در کانال</a>`
+  song.telegram?.message_id
+    ? `\n<a href="https://t.me/deybalalir/${song.telegram.message_id}">مشاهده در کانال</a>`
     : ""
 }
 
 🎧 <b>کیفیت‌های موجود</b>
 
-• 64 kbps — ${song.bytes64 ? formatBytes(song.bytes64) : "❌"}
-• 128 kbps — ${song.bytes128 ? formatBytes(song.bytes128) : "❌"}
-• 320 kbps — ${song.bytes320 ? formatBytes(song.bytes320) : "❌"}
+• 64 kbps — ${
+    song.links?.["64"]?.bytes ? formatBytes(song.links["64"].bytes) : "❌"
+  }
+• 128 kbps — ${
+    song.links?.["128"]?.bytes ? formatBytes(song.links["128"].bytes) : "❌"
+  }
+• 320 kbps — ${
+    song.links?.["320"]?.bytes ? formatBytes(song.links["320"].bytes) : "❌"
+  }
 
 ${isSongInFavorites ? "✅ این آهنگ در لیست علاقه‌مندی‌های شما وجود دارد." : ""}
 

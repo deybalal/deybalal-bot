@@ -157,6 +157,25 @@ interface SongJson {
   ogg?: string | null;
   createdAt?: string | Date;
   updatedAt?: string | Date;
+  artists?: {
+    id: string;
+    name: string;
+    nameEn?: string | null;
+    fileId?: string | null;
+    fileUniqueId?: string | null;
+  }[];
+  telegram?: {
+    "64"?: { file_id: string; file_unique_id: string } | null;
+    "128"?: { file_id: string; file_unique_id: string } | null;
+    "320"?: { file_id: string; file_unique_id: string } | null;
+    coverArt?: { file_id: string; file_unique_id: string } | null;
+    ogg?: { file_id: string; file_unique_id: string } | null;
+  } | null;
+  post?: {
+    has_posted?: boolean;
+    message_id?: number | null;
+    ogg_message_id?: number | null;
+  } | null;
 }
 
 interface SongCrewJson {
@@ -243,12 +262,57 @@ interface PlayHistoryJson {
   playedAt?: string | Date;
 }
 
+interface RadioPlaylistJson {
+  id: string;
+  date: string | Date;
+  startTime: string | Date;
+  totalDuration: number;
+  createdAt?: string | Date;
+  updatedAt?: string | Date;
+}
+
+interface RadioTrackJson {
+  id: string;
+  playlistId: string;
+  songId: string;
+  order: number;
+  duration: number;
+  startOffset: number;
+}
+
+interface TelegramJson {
+  id: string;
+  songId: string;
+  file_id_64?: string | null;
+  file_unique_id_64?: string | null;
+  file_id_128?: string | null;
+  file_unique_id_128?: string | null;
+  file_id_320?: string | null;
+  file_unique_id_320?: string | null;
+  file_id_ogg?: string | null;
+  file_unique_id_ogg?: string | null;
+  cover_art_file_id?: string | null;
+  cover_art_file_unique_id?: string | null;
+  ogg_file_id?: string | null;
+  ogg_file_unique_id?: string | null;
+  has_posted?: boolean;
+  message_id?: number | null;
+  ogg_message_id?: number | null;
+  createdAt?: string | Date;
+  updatedAt?: string | Date;
+}
+
 interface RelationLink {
   A: string;
   B: string;
 }
 
 interface BackupData {
+  songSimilarity: RelationLink[] | undefined;
+  albumToGenre: RelationLink[] | undefined;
+  genreToSong: RelationLink[] | undefined;
+  _ArtistToSong: RelationLink[] | undefined;
+  artistToSong: RelationLink[] | undefined;
   users?: UserJson[];
   User?: UserJson[];
   accounts?: AccountJson[];
@@ -287,6 +351,14 @@ interface BackupData {
   Contributor?: ContributorJson[];
   playHistories?: PlayHistoryJson[];
   PlayHistory?: PlayHistoryJson[];
+
+  radioPlaylists?: RadioPlaylistJson[];
+  RadioPlaylist?: RadioPlaylistJson[];
+  radioTracks?: RadioTrackJson[];
+  RadioTrack?: RadioTrackJson[];
+  telegrams?: TelegramJson[];
+  Telegram?: TelegramJson[];
+
   relations?: BackupRelations;
 }
 
@@ -417,8 +489,10 @@ async function main(): Promise<void> {
 
   console.log(`📂 Reading backup file: ${inputPath}`);
   const rawData = await fs.readFile(inputPath, "utf-8");
+  console.log("rawData.le ", rawData.length);
   const payload: BackupPayload & BackupData = JSON.parse(rawData);
-
+  console.log("payload ", payload.data?.songs?.length);
+  console.log("Hallo");
   const data: BackupData = payload.data || payload;
   const relations: BackupRelations = payload.relations || data.relations || {};
 
@@ -447,7 +521,7 @@ async function main(): Promise<void> {
 
     for (let i = 0; i < list.length; i++) {
       try {
-        await processFn(list[i]!);
+        await processFn(list[i] as T);
         stats[modelName].success++;
       } catch (err: unknown) {
         stats[modelName].failed++;
@@ -795,6 +869,7 @@ async function main(): Promise<void> {
     // --- 5. Songs & Song Relations ---
     console.log("\n--- 5. Importing Songs ---");
     const songs = data.songs || data.Song;
+    console.log("songs.le ", songs?.length);
     await importBatch("songs", songs, async (s: SongJson) => {
       const parsedLinks = parseJsonField(s.links);
 
@@ -860,6 +935,69 @@ async function main(): Promise<void> {
           updatedAt: parseDate(s.updatedAt),
         },
       });
+
+      if (s.artists && s.artists.length > 0) {
+        for (const art of s.artists) {
+          try {
+            await prisma.artist.update({
+              where: { id: art.id },
+              data: {
+                ...(art.fileId ? { fileId: art.fileId } : {}),
+                ...(art.fileUniqueId ? { fileUniqueId: art.fileUniqueId } : {}),
+              },
+            });
+          } catch {
+            // ignore if artist not found
+          }
+        }
+        await prisma.song.update({
+          where: { id: s.id },
+          data: {
+            artists: {
+              connect: s.artists.map((a) => ({ id: a.id })),
+            },
+          },
+        });
+      }
+
+      if (s.telegram || s.post) {
+        const tg = s.telegram;
+        const pt = s.post;
+        await prisma.telegram.upsert({
+          where: { songId: s.id },
+          update: {
+            file_id_64: tg?.["64"]?.file_id ?? null,
+            file_unique_id_64: tg?.["64"]?.file_unique_id ?? null,
+            file_id_128: tg?.["128"]?.file_id ?? null,
+            file_unique_id_128: tg?.["128"]?.file_unique_id ?? null,
+            file_id_320: tg?.["320"]?.file_id ?? null,
+            file_unique_id_320: tg?.["320"]?.file_unique_id ?? null,
+            cover_art_file_id: tg?.coverArt?.file_id ?? null,
+            cover_art_file_unique_id: tg?.coverArt?.file_unique_id ?? null,
+            ogg_file_id: tg?.ogg?.file_id ?? null,
+            ogg_file_unique_id: tg?.ogg?.file_unique_id ?? null,
+            has_posted: pt?.has_posted ?? false,
+            message_id: pt?.message_id ?? null,
+            ogg_message_id: pt?.ogg_message_id ?? null,
+          },
+          create: {
+            songId: s.id,
+            file_id_64: tg?.["64"]?.file_id ?? null,
+            file_unique_id_64: tg?.["64"]?.file_unique_id ?? null,
+            file_id_128: tg?.["128"]?.file_id ?? null,
+            file_unique_id_128: tg?.["128"]?.file_unique_id ?? null,
+            file_id_320: tg?.["320"]?.file_id ?? null,
+            file_unique_id_320: tg?.["320"]?.file_unique_id ?? null,
+            cover_art_file_id: tg?.coverArt?.file_id ?? null,
+            cover_art_file_unique_id: tg?.coverArt?.file_unique_id ?? null,
+            ogg_file_id: tg?.ogg?.file_id ?? null,
+            ogg_file_unique_id: tg?.ogg?.file_unique_id ?? null,
+            has_posted: pt?.has_posted ?? false,
+            message_id: pt?.message_id ?? null,
+            ogg_message_id: pt?.ogg_message_id ?? null,
+          },
+        });
+      }
     });
 
     const songCrews = data.songCrews || data.SongCrew;
@@ -1131,7 +1269,6 @@ async function main(): Promise<void> {
       for (let i = 0; i < list.length; i++) {
         const item = list[i];
         if (!item) {
-          console.log("Warning! Item was Undefined!");
           continue;
         }
         try {
@@ -1144,7 +1281,7 @@ async function main(): Promise<void> {
         } catch {
           if (fallbackFn) {
             try {
-              await fallbackFn(item);
+              await fallbackFn(item as RelationLink);
               successCount++;
             } catch {
               errorCount++;
@@ -1165,7 +1302,11 @@ async function main(): Promise<void> {
       );
     };
 
-    const artistToSong = relations.artistToSong || relations._ArtistToSong;
+    const artistToSong =
+      relations.artistToSong ||
+      relations._ArtistToSong ||
+      data.artistToSong ||
+      data._ArtistToSong;
     await importRelation(
       "ArtistToSong",
       "_ArtistToSong",
@@ -1178,7 +1319,11 @@ async function main(): Promise<void> {
       }
     );
 
-    const genreToSong = relations.genreToSong || relations._GenreToSong;
+    const genreToSong =
+      relations.genreToSong ||
+      relations._GenreToSong ||
+      data.genreToSong ||
+      data.genreToSong;
     await importRelation(
       "GenreToSong",
       "_GenreToSong",
@@ -1191,7 +1336,11 @@ async function main(): Promise<void> {
       }
     );
 
-    const albumToGenre = relations.albumToGenre || relations._AlbumToGenre;
+    const albumToGenre =
+      relations.albumToGenre ||
+      relations._AlbumToGenre ||
+      data.albumToGenre ||
+      data.albumToGenre;
     await importRelation(
       "AlbumToGenre",
       "_AlbumToGenre",
@@ -1205,7 +1354,10 @@ async function main(): Promise<void> {
     );
 
     const songSimilarity =
-      relations.songSimilarity || relations._SongSimilarity;
+      relations.songSimilarity ||
+      relations._SongSimilarity ||
+      data.songSimilarity ||
+      data.songSimilarity;
     await importRelation(
       "SongSimilarity",
       "_SongSimilarity",

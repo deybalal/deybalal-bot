@@ -24,7 +24,7 @@ export function registerLyricVideoCallbacks(bot: Bot) {
     await ctx.answerCallbackQuery();
     await ctx.deleteMessage();
 
-    const song = getSongById(state.songId);
+    const song = await getSongById(state.songId);
     const position = await enqueue({
       userId,
       chatId: ctx.chat!.id,
@@ -34,7 +34,8 @@ export function registerLyricVideoCallbacks(bot: Bot) {
       reject: () => {},
     });
 
-    const resolutionLabel = resolution === "big" ? "🖥 بزرگ (PC)" : "📱 کوچک (Instagram)";
+    const resolutionLabel =
+      resolution === "big" ? "🖥 بزرگ (PC)" : "📱 کوچک (Instagram)";
 
     if (position === 1) {
       const progress = await ctx.reply(

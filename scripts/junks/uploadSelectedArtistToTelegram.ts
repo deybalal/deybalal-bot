@@ -3,14 +3,14 @@ import "dotenv/config";
 
 import path from "path";
 
-import { db } from "../src/db";
+import { db } from "../../src/db";
 import {
   deleteTelegramFile,
   getSongs,
   getSongsByArtistId,
   getTelegramFile,
   saveTelegramFile,
-} from "../src/dbUtils";
+} from "../../src/dbUtils";
 
 const bot = new Bot(process.env.BOT_TOKEN!);
 

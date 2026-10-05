@@ -1,5 +1,10 @@
 import { Bot } from "grammy";
-import { removeFavorite, addFavorite, getFavoriteSongs, getSongById } from "../dbUtils";
+import {
+  removeFavorite,
+  addFavorite,
+  getFavoriteSongs,
+  getSongById,
+} from "../dbUtils";
 import { showSong } from "../../tools/showSong";
 
 export function registerFavoriteCallbacks(bot: Bot) {
@@ -10,9 +15,12 @@ export function registerFavoriteCallbacks(bot: Bot) {
       return;
     }
     console.log("Remove from favorites:", songId);
-    removeFavorite(ctx.from!.id, songId);
+    await removeFavorite(ctx.from!.id, songId);
     await ctx.answerCallbackQuery("✅ آهنگ از علاقه‌مندی‌ها حذف شد");
-    const buildSongKeyboard = await showSong(ctx, getSongById(songId)!, false);
+
+    const getSong = await getSongById(songId);
+
+    const buildSongKeyboard = await showSong(ctx, getSong!, false);
 
     await ctx.editMessageReplyMarkup({
       reply_markup: buildSongKeyboard?.reply_markup,
@@ -28,7 +36,10 @@ export function registerFavoriteCallbacks(bot: Bot) {
     console.log("Add to favorites:", songId);
     addFavorite(ctx.from!.id, songId);
     await ctx.answerCallbackQuery("✅ آهنگ به علاقه‌مندی‌ها اضافه شد");
-    const buildSongKeyboard = await showSong(ctx, getSongById(songId)!, false);
+
+    const getSong = await getSongById(songId);
+
+    const buildSongKeyboard = await showSong(ctx, getSong!, false);
 
     await ctx.editMessageReplyMarkup({
       reply_markup: buildSongKeyboard?.reply_markup,
@@ -42,7 +53,7 @@ export function registerFavoriteCallbacks(bot: Bot) {
     const start = page * PAGE_SIZE;
     const end = start + PAGE_SIZE;
 
-    const songs = getFavoriteSongs(ctx.from.id);
+    const songs = await getFavoriteSongs(ctx.from.id);
 
     const pageSongs = songs.slice(start, end);
 
@@ -100,7 +111,7 @@ export function registerFavoriteCallbacks(bot: Bot) {
   bot.callbackQuery("frand", async (ctx) => {
     await ctx.answerCallbackQuery();
 
-    const songs = getFavoriteSongs(ctx.from.id);
+    const songs = await getFavoriteSongs(ctx.from.id);
 
     if (songs.length === 0) {
       await ctx.answerCallbackQuery("هیچ آهنگ مورد علاقه‌ای وجود ندارد!");

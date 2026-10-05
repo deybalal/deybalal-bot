@@ -23,7 +23,7 @@ export function registerSongCallbacks(bot: Bot) {
   bot.callbackQuery(/^s:(.+)$/, async (ctx) => {
     console.log("Song query");
     const songId = ctx.match[1];
-    const song = getSongById(songId!);
+    const song = await getSongById(songId!);
 
     if (!song) {
       await ctx.answerCallbackQuery("آهنگ مورد نظر یافت نشد!");
@@ -40,33 +40,44 @@ export function registerSongCallbacks(bot: Bot) {
     console.log("Download query");
     const songId = ctx.match[1];
     const quality = ctx.match[2];
-    const song = getSongById(songId!);
+    const song = await getSongById(songId!);
 
     if (!song) {
       await ctx.answerCallbackQuery("آهنگ مورد نظر یافت نشد!");
       return;
     }
 
-    if (!song.telegram[quality as keyof typeof song.telegram]) {
+    if (
+      !song.telegram ||
+      !song.telegram[quality as keyof typeof song.telegram]
+    ) {
       await ctx.answerCallbackQuery("کیفیت مورد نظر یافت نشد!");
       return;
     }
 
     await ctx.answerCallbackQuery();
 
-    await ctx.replyWithAudio(
-      song.telegram[quality as keyof typeof song.telegram]?.fileId || ""
-    );
+    const fileId = song.telegram[quality as "128" | "320" | "ogg"]?.fileId;
+    if (!fileId) {
+      await ctx.answerCallbackQuery("کیفیت مورد نظر یافت نشد!");
+      return;
+    }
+    await ctx.replyWithAudio(fileId);
     incrementSongDownloads(songId!);
   });
 
   bot.callbackQuery(/^p:(.+)$/, async (ctx) => {
     console.log("Preview query");
     const songId = ctx.match[1];
-    const song = getSongById(songId!);
+    const song = await getSongById(songId!);
 
     if (!song) {
       await ctx.answerCallbackQuery("آهنگ مورد نظر یافت نشد!");
+      return;
+    }
+
+    if (!song.telegram || !song.telegram.ogg) {
+      await ctx.answerCallbackQuery("پیش‌نمایش موجود نیست!");
       return;
     }
 
@@ -80,7 +91,7 @@ export function registerSongCallbacks(bot: Bot) {
 
     await ctx.answerCallbackQuery();
 
-    const song = getSongById(songId!);
+    const song = await getSongById(songId!);
 
     if (!song) {
       return ctx.reply("❌ آهنگ پیدا نشد.");
@@ -112,7 +123,7 @@ export function registerSongCallbacks(bot: Bot) {
       .filter(Boolean)
       .join("\n");
 
-    if (song.telegram.coverArt?.fileId) {
+    if (song.telegram?.coverArt?.fileId) {
       await ctx.replyWithPhoto(song.telegram.coverArt.fileId, {
         caption,
         parse_mode: "HTML",
@@ -128,7 +139,7 @@ export function registerSongCallbacks(bot: Bot) {
 
   bot.callbackQuery(/^lyrics:(.+)$/, async (ctx) => {
     const songId = ctx.match[1];
-    const song = getSongById(songId!);
+    const song = await getSongById(songId!);
 
     if (!song || !song.lyrics) {
       await ctx.answerCallbackQuery("❌ متن آهنگی برای این آهنگ پیدا نشد.");
@@ -141,7 +152,7 @@ export function registerSongCallbacks(bot: Bot) {
     const MESSAGE_LIMIT = 1010 - song.title.length;
 
     if (lyrics.length <= MESSAGE_LIMIT) {
-      await ctx.replyWithPhoto(song.telegram.coverArt?.fileId || "", {
+      await ctx.replyWithPhoto(song.telegram?.coverArt?.fileId || "", {
         caption: `🎵 <a href="https://t.me/deybalalirbot?start=s_${song.id}"><b>${song.title}</b></a> از  <a href="https://t.me/deybalalirbot?start=a_${song.artists[0]?.id}"><b>${song.artist}</b></a>\n\n<i>${lyrics}</i>`,
         parse_mode: "HTML",
       });
@@ -169,7 +180,7 @@ export function registerSongCallbacks(bot: Bot) {
       const isLast = i === chunks.length - 1;
 
       if (i === 0) {
-        await ctx.replyWithPhoto(song.telegram.coverArt?.fileId || "", {
+        await ctx.replyWithPhoto(song.telegram?.coverArt?.fileId || "", {
           caption: `🎵 <b>${song.title}</b>\n\n ${i + 1}/${
             chunks.length
           }\n\n<i>${chunk}</i>`,
@@ -186,20 +197,25 @@ export function registerSongCallbacks(bot: Bot) {
   bot.callbackQuery("random", async (ctx) => {
     console.log("Random query");
     const { getRandomSong } = await import("../dbUtils");
-    const randomSong = getRandomSong();
+    const randomSong = await getRandomSong();
     await ctx.answerCallbackQuery();
 
+    if (!randomSong || !randomSong.telegram) {
+      await ctx.reply("❌ آهنگی یافت نشد.");
+      return;
+    }
+
     const inline = new InlineKeyboard()
-      .text("🎧 نمایش", `s:${randomSong?.id}`)
+      .text("🎧 نمایش", `s:${randomSong.id}`)
       .row()
       .text("🎵 موزیک بعدی", "random")
       .row();
 
-    await ctx.replyWithAudio(randomSong?.telegram["320"]?.fileId || "", {
-      caption: `${randomSong?.title} از ${randomSong?.artist}`,
-      duration: randomSong?.duration,
-      performer: randomSong?.artistEn || "None",
-      title: `${randomSong?.title} از ${randomSong?.artist}`,
+    await ctx.replyWithAudio(randomSong.telegram["320"]?.fileId || "", {
+      caption: `${randomSong.title} از ${randomSong.artist}`,
+      duration: randomSong.duration,
+      performer: randomSong.artistEn || "None",
+      title: `${randomSong.title} از ${randomSong.artist}`,
       parse_mode: "HTML",
       reply_markup: inline,
     });
@@ -211,7 +227,7 @@ export function registerSongCallbacks(bot: Bot) {
     const query = ctx.match[1]!;
     const page = parseInt(ctx.match[2] || "0");
 
-    const songs = searchSongs(query);
+    const songs = await searchSongs(query);
 
     if (songs.length === 0) {
       await ctx.answerCallbackQuery("نتیجه‌ای پیدا نشد!");

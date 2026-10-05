@@ -1,7 +1,11 @@
 import { Bot, InputFile } from "grammy";
-import badfiles from "../data/badFiles1.json";
-import { deleteTelegramFile, getSongs, saveTelegramFile } from "../src/dbUtils";
-import { db } from "../src/db";
+import badfiles from "../../data/badFiles1.json";
+import {
+  deleteTelegramFile,
+  getSongs,
+  saveTelegramFile,
+} from "../../src/dbUtils";
+import { db } from "../../src/db";
 import path from "path";
 import { readFile, writeFile } from "fs/promises";
 import { fileURLToPath } from "url";

@@ -112,21 +112,21 @@ bot.on("inline_query", async (ctx) => {
     }
 
     const userId = ctx.from!.id;
-    const preferredQuality = getPreferredQuality(userId);
+    const preferredQuality = await getPreferredQuality(userId);
 
-    const results = searchSongs(query, 50);
+    const results = await searchSongs(query, 50);
 
     const validResults: InlineQueryResultCachedAudio[] = [];
 
     for (const result of results.slice(0, 50)) {
-      const audioPreferred = getTelegramFile(
+      const audioPreferred = await getTelegramFile(
         result.song.id,
         "audio",
         preferredQuality
       );
-      const audio128 = getTelegramFile(result.song.id, "audio", "128");
-      const audio320 = getTelegramFile(result.song.id, "audio", "320");
-      const audio64 = getTelegramFile(result.song.id, "audio", "64");
+      const audio128 = await getTelegramFile(result.song.id, "audio", "128");
+      const audio320 = await getTelegramFile(result.song.id, "audio", "320");
+      const audio64 = await getTelegramFile(result.song.id, "audio", "64");
 
       const audioFile = audioPreferred || audio128 || audio320 || audio64;
 
@@ -200,7 +200,7 @@ bot.on("message:text", async (ctx) => {
 
   ensureUser(ctx.from!);
 
-  const results = searchSongs(text);
+  const results = await searchSongs(text);
 
   if (results.length === 0) {
     await ctx.reply(`🔍 نتیجه‌ای برای "<b>${text}</b>" پیدا نشد.`, {

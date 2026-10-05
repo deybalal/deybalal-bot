@@ -12,7 +12,7 @@ import { showSong } from "../../tools/showSong";
 
 export function registerStartCommand(bot: Bot) {
   bot.command("start", async (ctx) => {
-    const handleUser = ensureUser(ctx.from!);
+    const handleUser = await ensureUser(ctx.from!);
 
     if (handleUser) {
       await bot.api.sendMessage(
@@ -95,7 +95,7 @@ export function registerStartCommand(bot: Bot) {
         "utf8"
       );
 
-      const songs = searchSongs(query);
+      const songs = await searchSongs(query);
 
       if (songs.length === 0) {
         await ctx.reply(`🔍 نتیجه‌ای برای "<b>${query}</b>" پیدا نشد.`, {
@@ -112,13 +112,13 @@ export function registerStartCommand(bot: Bot) {
       const artistId = ctx.match.substring(2);
       console.log("artID ", artistId);
 
-      const songs = getSongsByArtistId(artistId);
+      const songs = await getSongsByArtistId(artistId);
 
       if (!songs.length) {
         await ctx.reply("آهنگی برای این هنرمند پیدا نشد!");
         return;
       }
-      const artist = getArtistById(artistId);
+      const artist = await getArtistById(artistId);
       const artistName = artist?.name || "هنرمند"; // fallback if needed
 
       const artistNameEn = artist?.nameEn || "artist";
@@ -210,7 +210,7 @@ export function registerStartCommand(bot: Bot) {
     if (ctx.match?.startsWith("s_")) {
       const songId = ctx.match.substring(2);
 
-      const song = getSongById(songId);
+      const song = await getSongById(songId);
 
       if (!song) {
         await ctx.reply("❌ این آهنگ پیدا نشد.");
@@ -220,7 +220,7 @@ export function registerStartCommand(bot: Bot) {
       return await showSong(ctx, song);
     }
 
-    const stats = getStats();
+    const stats = await getStats();
 
     const inline = new InlineKeyboard()
       .text("🎵 موزیک تصادفی", "random")

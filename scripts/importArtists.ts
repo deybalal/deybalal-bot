@@ -19,6 +19,10 @@ for (const artist of artists) {
     description: artist.description,
     followers: Number(artist.followers) || 0,
     telegram: artist.telegram,
+    userId: artist.userId || "",
+    igFollowers: artist.igFollowers || 0,
+    fileId: artist.fileId || null,
+    fileUniqueId: artist.fileUniqueId || null,
   });
 }
 

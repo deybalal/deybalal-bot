@@ -23,6 +23,7 @@ model Song {
   lyrics              String?            
   syncedLyrics        String?            
   playCount           Int                @default(0)
+  downloads           Int                @default(0)
   isDisabled          Boolean            @default(false)
   disabledDescription String?
   isActive            Boolean            @default(false)

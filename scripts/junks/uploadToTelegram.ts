@@ -3,8 +3,8 @@ import "dotenv/config";
 
 import path from "path";
 
-import { db } from "../src/db";
-import { getSongs, getTelegramFile, saveTelegramFile } from "../src/dbUtils";
+import { db } from "../../src/db";
+import { getSongs, getTelegramFile, saveTelegramFile } from "../../src/dbUtils";
 
 const bot = new Bot(process.env.BOT_TOKEN!);
 

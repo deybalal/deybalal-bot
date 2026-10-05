@@ -1,3 +1,8 @@
+import type {
+  Song as PrismaSong,
+  Artist as PrismaArtist,
+} from "@prisma/client";
+
 export interface TelegramFile {
   songId: string;
   type: string;
@@ -9,38 +14,27 @@ export interface TelegramFile {
   uploadedAt?: number | Date;
 }
 
-export interface Song {
-  id: string;
-  slug: string;
-  title: string;
-  titleEn?: string | null;
-  artist: string;
-  artistEn?: string | null;
+export interface SongLinkItem {
+  url: string;
+  size: string;
+  bytes: number;
+}
+
+export interface SongLinks {
+  "64"?: SongLinkItem;
+  "128"?: SongLinkItem;
+  "320"?: SongLinkItem;
+  [key: string]: SongLinkItem | undefined;
+}
+
+export interface Song
+  extends Omit<PrismaSong, "links" | "createdAt" | "updatedAt"> {
   artists?: any;
-  albumName?: string | null;
-  coverArt?: string | null;
-  year: number;
-  duration: number;
-  uri: string;
-  filename?: string | null;
   songIndex?: number;
-  index?: number;
-  lyrics?: string | null;
-  syncedLyrics?: string | null;
-  playCount: number;
-  downloads?: number;
-  isDisabled: boolean | number;
-  disabledDescription?: string | null;
-  isActive: boolean | number;
-  isFeatured: boolean | number;
-  albumId?: string | null;
-  userId?: string;
-  lyricsSource?: string | null;
-  lyricsSourceUrl?: string | null;
-  ogg?: string | null;
-  links?: any;
+  links?: SongLinks | null;
   createdAt?: number | Date;
   updatedAt?: number | Date;
+  telegram?: any;
 }
 
 export interface TelegramSongWithFiles extends Song {
@@ -50,22 +44,21 @@ export interface TelegramSongWithFiles extends Song {
     "64": TelegramFile | null;
     "128": TelegramFile | null;
     "320": TelegramFile | null;
+    message_id?: number | null;
+    ogg_message_id?: number | null;
+    has_posted?: boolean;
+    createdAt?: number | Date;
+    updatedAt?: number | Date;
   };
 }
 
-export interface Artist {
-  id: string;
-  name: string;
-  nameEn?: string | null;
-  image?: string | null;
-  isVerified?: boolean | number;
-  ig?: string | null;
-  description?: string | null;
+export interface Artist extends Omit<PrismaArtist, "createdAt" | "updatedAt"> {
   followers?: number;
   telegramFileId?: string | null;
   telegramFileUniqueId?: string | null;
-  fileId?: string | null;
-  fileUniqueId?: string | null;
+  createdAt?: number | Date;
+  updatedAt?: number | Date;
+  telegram?: any;
 }
 
 export interface SearchResult {
@@ -82,4 +75,29 @@ export interface TelegramUser {
   username?: string;
   language_code?: string;
   is_premium?: boolean;
+}
+
+export type LyricVideoState = {
+  songId: string;
+  images: string[];
+  jobDir: string;
+  startMs?: number;
+  endMs?: number;
+  progressMessageId?: number;
+  step: "waiting_images" | "waiting_range" | "rendering" | "waiting_resolution";
+  resolution?: VideoResolution;
+};
+
+export type VideoResolution = "big" | "small";
+
+export interface VideoJob {
+  userId: number;
+  chatId: number;
+
+  songId: string;
+
+  title: string;
+
+  resolve: () => void;
+  reject: (err: Error) => void;
 }

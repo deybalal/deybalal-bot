@@ -21,7 +21,7 @@ export async function sendSearchResults(
   const start = page * PAGE_SIZE;
   const end = start + PAGE_SIZE;
 
-  const results = allSongs || searchSongs(query);
+  const results = allSongs || (await searchSongs(query));
 
   const pageResults = results.slice(start, end);
 

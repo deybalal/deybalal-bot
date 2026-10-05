@@ -5,7 +5,7 @@ export function registerTopCommand(bot: Bot) {
   bot.command("top", async (ctx) => {
     ensureUser(ctx.from!);
 
-    const songs = getTopPlayedSongs(50);
+    const songs = await getTopPlayedSongs(50);
 
     if (!songs.length) {
       await ctx.reply("آهنگی پیدا نشد!");

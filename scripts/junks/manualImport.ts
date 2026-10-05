@@ -1,6 +1,6 @@
 import "dotenv/config";
-import { db } from "../src/db";
-import { saveTelegramFile } from "../src/dbUtils";
+import { db } from "../../src/db";
+import { saveTelegramFile } from "../../src/dbUtils";
 
 const saveTx = db.transaction(
   (

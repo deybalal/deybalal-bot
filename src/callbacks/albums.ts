@@ -10,7 +10,7 @@ export function registerAlbumCallbacks(bot: Bot) {
     const start = page * PAGE_SIZE;
     const end = start + PAGE_SIZE;
 
-    const albums = getAllAlbums();
+    const albums = await getAllAlbums();
 
     if (!albums.length) {
       await ctx.answerCallbackQuery("آلبومی پیدا نشد!");
@@ -70,7 +70,7 @@ export function registerAlbumCallbacks(bot: Bot) {
     const start = page * PAGE_SIZE;
     const end = start + PAGE_SIZE;
 
-    let songs = getSongsByAlbumId(albumId);
+    let songs = await getSongsByAlbumId(albumId);
 
     if (!songs.length) {
       await ctx.answerCallbackQuery("آهنگی پیدا نشد!");
@@ -104,8 +104,10 @@ export function registerAlbumCallbacks(bot: Bot) {
       });
     }
 
-    const totalAlbums = getAllAlbums();
-    const currentAlbumIndex = totalAlbums.findIndex((a) => a.albumId === albumId);
+    const totalAlbums = await getAllAlbums();
+    const currentAlbumIndex = totalAlbums.findIndex(
+      (a) => a.albumId === albumId
+    );
 
     await ctx.editMessageReplyMarkup({
       reply_markup: {
