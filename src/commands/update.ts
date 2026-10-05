@@ -36,8 +36,9 @@ export function registerUpdateCommand(bot: Bot) {
         "✅ Bot updated successfully!"
       );
 
-      // Restart the bot
-      await execAsync("pm2 restart dey", { cwd });
+      setTimeout(() => {
+        exec("pm2 restart dey", { cwd });
+      }, 4000);
     } catch (err: any) {
       await ctx.api.editMessageText(
         ctx.chat.id,
