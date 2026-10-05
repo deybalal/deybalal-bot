@@ -4,6 +4,7 @@ import {
   incrementViewCount,
   incrementSongDownloads,
   searchSongs,
+  getRandomSong,
 } from "../dbUtils";
 import { showSong } from "../../tools/showSong";
 import { hashtagify } from "../../tools/hashtagify";
@@ -196,7 +197,6 @@ export function registerSongCallbacks(bot: Bot) {
 
   bot.callbackQuery("random", async (ctx) => {
     console.log("Random query");
-    const { getRandomSong } = await import("../dbUtils");
     const randomSong = await getRandomSong();
     await ctx.answerCallbackQuery();
 

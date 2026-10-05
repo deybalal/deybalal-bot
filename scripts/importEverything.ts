@@ -308,11 +308,6 @@ interface RelationLink {
 }
 
 interface BackupData {
-  songSimilarity: RelationLink[] | undefined;
-  albumToGenre: RelationLink[] | undefined;
-  genreToSong: RelationLink[] | undefined;
-  _ArtistToSong: RelationLink[] | undefined;
-  artistToSong: RelationLink[] | undefined;
   users?: UserJson[];
   User?: UserJson[];
   accounts?: AccountJson[];
@@ -433,7 +428,7 @@ async function findLatestBackupFile(): Promise<string | null> {
 
       if (matches.length > 0) {
         matches.sort().reverse();
-        return path.join(dir, matches[0] as string);
+        return path.join(dir, matches[0]);
       }
     } catch {}
   }
@@ -521,7 +516,7 @@ async function main(): Promise<void> {
 
     for (let i = 0; i < list.length; i++) {
       try {
-        await processFn(list[i] as T);
+        await processFn(list[i]);
         stats[modelName].success++;
       } catch (err: unknown) {
         stats[modelName].failed++;
@@ -651,7 +646,7 @@ async function main(): Promise<void> {
           bio: u.bio ?? "",
           isPrivate: Boolean(u.isPrivate),
           isBanned: Boolean(u.isBanned),
-          userIndex: u.userIndex,
+          // userIndex: u.userIndex, // Omitted to avoid Postgres sequence collisions
           userSlug: u.userSlug,
           instagramHandle: u.instagramHandle ?? null,
           role: roleValue,
@@ -671,7 +666,7 @@ async function main(): Promise<void> {
           isPrivate: Boolean(u.isPrivate),
           isBanned: Boolean(u.isBanned),
           artistId: null, // Set deferred after artists exist
-          userIndex: u.userIndex,
+          // userIndex: u.userIndex, // Omitted to avoid Postgres sequence collisions
           userSlug: u.userSlug,
           instagramHandle: u.instagramHandle ?? null,
           role: roleValue,
@@ -1268,9 +1263,6 @@ async function main(): Promise<void> {
 
       for (let i = 0; i < list.length; i++) {
         const item = list[i];
-        if (!item) {
-          continue;
-        }
         try {
           await prisma.$executeRawUnsafe(
             `INSERT INTO \"${tableName}\" (\"A\", \"B\") VALUES ($1, $2) ON CONFLICT DO NOTHING`,
@@ -1281,7 +1273,7 @@ async function main(): Promise<void> {
         } catch {
           if (fallbackFn) {
             try {
-              await fallbackFn(item as RelationLink);
+              await fallbackFn(item);
               successCount++;
             } catch {
               errorCount++;
@@ -1323,7 +1315,7 @@ async function main(): Promise<void> {
       relations.genreToSong ||
       relations._GenreToSong ||
       data.genreToSong ||
-      data.genreToSong;
+      data._GenreToSong;
     await importRelation(
       "GenreToSong",
       "_GenreToSong",
@@ -1340,7 +1332,7 @@ async function main(): Promise<void> {
       relations.albumToGenre ||
       relations._AlbumToGenre ||
       data.albumToGenre ||
-      data.albumToGenre;
+      data._AlbumToGenre;
     await importRelation(
       "AlbumToGenre",
       "_AlbumToGenre",
@@ -1357,7 +1349,7 @@ async function main(): Promise<void> {
       relations.songSimilarity ||
       relations._SongSimilarity ||
       data.songSimilarity ||
-      data.songSimilarity;
+      data._SongSimilarity;
     await importRelation(
       "SongSimilarity",
       "_SongSimilarity",
