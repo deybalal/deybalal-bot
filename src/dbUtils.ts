@@ -759,7 +759,7 @@ export async function getMostDownloadedSongs(
 ): Promise<TelegramSongWithFiles[]> {
   const songs = await prisma.song.findMany({
     where: { isActive: true, isDisabled: false },
-    orderBy: { playCount: "desc" },
+    orderBy: { downloads: "desc" },
     take: limit,
     include: { telegram: true },
   });
