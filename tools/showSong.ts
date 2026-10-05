@@ -1,5 +1,5 @@
 import { InlineKeyboard, type Context } from "grammy";
-import type { TelegramSongWithFiles } from "../types/types";
+import type { Artist, TelegramSongWithFiles } from "../types/types";
 import { formatDuration } from "./formatDuration";
 import { formatBytes } from "./formatBytes";
 import { incrementSongPlayCount, isFavorite } from "../src/dbUtils";
@@ -44,7 +44,7 @@ ${isSongInFavorites ? "✅ این آهنگ در لیست علاقه‌مندی�
 یکی از گزینه‌های زیر را انتخاب کنید.
 `;
 
-  const parsedArtists = JSON.parse(song.artists as unknown as string);
+  const parsedArtists = song.artists as Artist[];
 
   const kb = new InlineKeyboard();
   kb.text("دانلود 64", `d:${song.id}:64`).style("danger");

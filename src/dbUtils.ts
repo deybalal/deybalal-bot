@@ -399,7 +399,7 @@ export async function getSongById(
 ): Promise<TelegramSongWithFiles | null> {
   const song = await prisma.song.findUnique({
     where: { id: songId },
-    include: { telegram: true },
+    include: { telegram: true, artists: true },
   });
 
   if (!song) return null;
@@ -545,7 +545,7 @@ export async function incrementSongDownloads(id: string): Promise<void> {
   await prisma.song
     .update({
       where: { id },
-      data: { playCount: { increment: 1 } },
+      data: { downloads: { increment: 1 } },
     })
     .catch(() => {});
 }

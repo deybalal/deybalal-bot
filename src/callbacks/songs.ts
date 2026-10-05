@@ -64,7 +64,7 @@ export function registerSongCallbacks(bot: Bot) {
       return;
     }
     await ctx.replyWithAudio(fileId);
-    incrementSongDownloads(songId!);
+    await incrementSongDownloads(songId!);
   });
 
   bot.callbackQuery(/^p:(.+)$/, async (ctx) => {
