@@ -5,6 +5,16 @@ import fs from "fs/promises";
 import path from "path";
 import "dotenv/config";
 
+declare global {
+  interface BigInt {
+    toJSON(): string;
+  }
+}
+
+BigInt.prototype.toJSON = function () {
+  return this.toString();
+};
+
 async function main(): Promise<void> {
   console.log("🚀 Starting Full Database Export...\n");
 

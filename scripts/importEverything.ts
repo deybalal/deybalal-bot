@@ -24,6 +24,10 @@ interface UserJson {
   userIndex: number;
   userSlug: string;
   instagramHandle?: string | null;
+  telegramId?: string | number | bigint | null;
+  telegramUsername?: string | null;
+  telegramFirstName?: string | null;
+  telegramLastName?: string | null;
   role?: Role | string;
   isVerified?: boolean;
   isUserAnArtist?: boolean;
@@ -650,6 +654,10 @@ async function main(): Promise<void> {
           // userIndex: u.userIndex, // Omitted to avoid Postgres sequence collisions
           userSlug: u.userSlug,
           instagramHandle: u.instagramHandle ?? null,
+          telegramId: u.telegramId ? BigInt(u.telegramId) : null,
+          telegramUsername: u.telegramUsername ?? null,
+          telegramFirstName: u.telegramFirstName ?? null,
+          telegramLastName: u.telegramLastName ?? null,
           role: roleValue,
           isVerified: Boolean(u.isVerified),
           isUserAnArtist: Boolean(u.isUserAnArtist),
@@ -670,6 +678,10 @@ async function main(): Promise<void> {
           // userIndex: u.userIndex, // Omitted to avoid Postgres sequence collisions
           userSlug: u.userSlug,
           instagramHandle: u.instagramHandle ?? null,
+          telegramId: u.telegramId ? BigInt(u.telegramId) : null,
+          telegramUsername: u.telegramUsername ?? null,
+          telegramFirstName: u.telegramFirstName ?? null,
+          telegramLastName: u.telegramLastName ?? null,
           role: roleValue,
           isVerified: Boolean(u.isVerified),
           isUserAnArtist: Boolean(u.isUserAnArtist),
