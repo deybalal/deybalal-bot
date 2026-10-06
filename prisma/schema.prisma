@@ -230,7 +230,7 @@ model User {
   userIndex          Int                @unique @default(autoincrement())
   userSlug           String             @unique @default(nanoid(10)) 
   instagramHandle    String?
-  telegramId         Int?               @unique
+  telegramId         BigInt?               @unique
   telegramUsername   String?
   telegramFirstName  String?
   telegramLastName   String?

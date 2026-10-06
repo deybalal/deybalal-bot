@@ -76,8 +76,9 @@ export function formatSongWithTelegram(song: any): TelegramSongWithFiles {
  * Helper to get or create a user and their default favorite playlist.
  */
 async function getOrCreateUserFavoritePlaylist(telegramId: number) {
+  const telegramIdBigInt = BigInt(telegramId);
   let user = await prisma.user.findFirst({
-    where: { telegramId },
+    where: { telegramId: telegramIdBigInt },
   });
 
   if (!user) {
@@ -89,7 +90,7 @@ async function getOrCreateUserFavoritePlaylist(telegramId: number) {
         name: `کاربر تلگرام (${telegramId})`,
         email: `tg_${telegramId}@telegram.deybalal.ir`,
         emailVerified: false,
-        telegramId,
+        telegramId: telegramIdBigInt,
         userSlug,
         downloadPreference: 128,
       },
@@ -122,7 +123,7 @@ async function getOrCreateUserFavoritePlaylist(telegramId: number) {
  */
 export async function ensureUser(user: TelegramUser): Promise<boolean> {
   const existing = await prisma.user.findFirst({
-    where: { telegramId: user.id },
+    where: { telegramId: BigInt(user.id) },
   });
 
   if (!existing) {
@@ -139,7 +140,7 @@ export async function ensureUser(user: TelegramUser): Promise<boolean> {
         name: fullName,
         email: `tg_${user.id}@telegram.deybalal.ir`,
         emailVerified: true,
-        telegramId: user.id,
+        telegramId: BigInt(user.id),
         telegramUsername: user.username ?? null,
         telegramFirstName: user.first_name ?? null,
         telegramLastName: user.last_name ?? null,
@@ -606,7 +607,7 @@ export async function removeFavorite(
   songId: string
 ): Promise<void> {
   const user = await prisma.user.findFirst({
-    where: { telegramId: userId },
+    where: { telegramId: BigInt(userId) },
   });
   if (!user) return;
 
@@ -631,7 +632,7 @@ export async function isFavorite(
   songId: string
 ): Promise<boolean> {
   const user = await prisma.user.findFirst({
-    where: { telegramId: userId },
+    where: { telegramId: BigInt(userId) },
   });
   if (!user) return false;
 
@@ -657,7 +658,7 @@ export async function getFavoriteSongs(
   userId: number
 ): Promise<TelegramSongWithFiles[]> {
   const user = await prisma.user.findFirst({
-    where: { telegramId: userId },
+    where: { telegramId: BigInt(userId) },
   });
   if (!user) return [];
 
@@ -693,7 +694,7 @@ export async function getFavoriteSongs(
  */
 export async function getPreferredQuality(userId: number): Promise<string> {
   const user = await prisma.user.findFirst({
-    where: { telegramId: userId },
+    where: { telegramId: BigInt(userId) },
     select: { downloadPreference: true },
   });
 
@@ -710,7 +711,7 @@ export async function setPreferredQuality(
   const qualityNum = parseInt(String(quality), 10) || 128;
 
   const user = await prisma.user.findFirst({
-    where: { telegramId: userId },
+    where: { telegramId: BigInt(userId) },
   });
 
   if (user) {
