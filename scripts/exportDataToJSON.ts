@@ -299,7 +299,7 @@ if (
   process.argv[1]?.includes("exportDataToJSON")
 ) {
   exportSongsToJson()
-    .then((savedPath) => console.log("Saved export to:", savedPath))
+    .then((savedPath) => console.log(savedPath))
     .catch((err) => console.error("Export error:", err))
     .finally(() => prisma.$disconnect());
 }
