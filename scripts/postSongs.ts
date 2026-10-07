@@ -16,7 +16,7 @@ function generatePostTimes(): PostTime[] {
   const start = 9 * 60 + 20; // 09:20
   const end = 23 * 60 + 30; // 23:30
   const times = new Set<number>();
-  while (times.size < 3) {
+  while (times.size < 2) {
     const random = Math.floor(Math.random() * (end - start + 1)) + start;
     times.add(random);
   }
