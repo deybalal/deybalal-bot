@@ -49,6 +49,7 @@ import { handleVoiceIdentification } from "../tools/handleVoiceIdentification.js
 import { registerIdentifyCallback } from "./callbacks/identify.js";
 import { cors } from "hono/cors";
 import { registerStoryVideoCallbacks } from "./callbacks/storyVideo.js";
+import type { Artist } from "../types/types.js";
 
 const app = new Hono();
 
@@ -136,7 +137,7 @@ bot.on("inline_query", async (ctx) => {
         console.log("song.title is empty", result);
       }
 
-      const artists = JSON.parse(result.song.artists as unknown as string);
+      const artists = result.song.artists as Artist[];
 
       validResults.push({
         type: "audio",

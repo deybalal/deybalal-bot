@@ -1,4 +1,4 @@
-import type { TelegramSongWithFiles } from "../types/types";
+import type { Artist, TelegramSongWithFiles } from "../types/types";
 import { formatDuration } from "../tools/formatDuration";
 import { hashtagify } from "../tools/hashtagify";
 import type { Bot } from "grammy";
@@ -8,7 +8,7 @@ export async function sendSongToChannel(
   chatId: number,
   song: TelegramSongWithFiles
 ) {
-  const artists = JSON.parse(song.artists as unknown as string);
+  const artists = song.artists as Artist[];
   const captionArray: string[] = [];
 
   captionArray.push(`🎵 <b>${song.title}</b>`);
@@ -22,7 +22,7 @@ export async function sendSongToChannel(
     captionArray.push(`👤 <b>خواننده ها:</b> ${artistText}`);
   } else {
     captionArray.push(
-      `👤 <b>خواننده:</b> <a href="https://t.me/deybalalirbot?start=a_${artists[0].id}">${song.artist}</a>`
+      `👤 <b>خواننده:</b> <a href="https://t.me/deybalalirbot?start=a_${artists[0]?.id}">${song.artist}</a>`
     );
   }
   captionArray.push(`⏳ <b>زمان:</b> ${formatDuration(song.duration)}`);
