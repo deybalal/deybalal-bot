@@ -119,6 +119,8 @@ bot.on("inline_query", async (ctx) => {
 
     const validResults: InlineQueryResultCachedAudio[] = [];
 
+    console.log("Songs: ", results.slice(0, 10));
+
     for (const result of results.slice(0, 50)) {
       const audioPreferred = await getTelegramFile(
         result.song.id,
