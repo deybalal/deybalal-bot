@@ -856,7 +856,7 @@ export async function getUnpostedSongs(): Promise<TelegramSongWithFiles[]> {
       OR: [{ telegram: null }, { telegram: { has_posted: false } }],
     },
     orderBy: { index: "asc" },
-    include: { telegram: true },
+    include: { telegram: true, artists: true },
   });
 
   return songs.map(formatSongWithTelegram);
