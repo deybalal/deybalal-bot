@@ -482,6 +482,7 @@ export async function searchSongs(
       ],
     },
     take: 100,
+    include: { artists: true },
     orderBy: { playCount: "desc" },
   });
 
@@ -495,6 +496,7 @@ export async function searchSongs(
     const fallback = await prisma.song.findMany({
       where: { isActive: true, isDisabled: false },
       take: 200,
+      include: { artists: true },
       orderBy: { playCount: "desc" },
     });
     candidates = fallback.map((s: { index: any }) => ({
