@@ -52,6 +52,7 @@ import { registerStoryVideoCallbacks } from "./callbacks/storyVideo.js";
 import type { Artist } from "../types/types.js";
 import { registerFeaturedCallbacks } from "./callbacks/featured.js";
 import { registerFeaturedCommands } from "./commands/featured.js";
+import prisma from "./db.js";
 
 const app = new Hono();
 
@@ -185,6 +186,28 @@ bot.on("inline_query", async (ctx) => {
   }
 });
 
+bot.on("my_chat_member", async (ctx) => {
+  const chatMember = ctx.myChatMember;
+
+  // Make sure this is a private chat (a direct message with a user)
+  if (chatMember.chat.type === "private") {
+    // Check if the user blocked the bot
+    if (chatMember.new_chat_member.status === "kicked") {
+      const telegramId = chatMember.chat.id;
+      console.log(`User ${telegramId} just blocked the bot!`);
+
+      await prisma.user.update({
+        where: { telegramId: BigInt(telegramId) },
+        data: { hasBlockedBot: true },
+      });
+    }
+    // Check if the user unblocked the bot
+    else if (chatMember.new_chat_member.status === "member") {
+      console.log(`User ${chatMember.chat.id} unblocked the bot!`);
+    }
+  }
+});
+
 bot.on("message:photo", async (ctx) => {
   handlePhoto(ctx);
 });
@@ -203,7 +226,7 @@ bot.on("message:text", async (ctx) => {
   const rangeHandled = await handleRangeInput(ctx);
   if (rangeHandled) return;
 
-  ensureUser(ctx.from!);
+  await ensureUser(ctx.from!);
 
   const results = await searchSongs(text);
 
@@ -225,7 +248,7 @@ bot.on("message:voice", async (ctx) => {
     return;
   }
 
-  ensureUser(ctx.from!);
+  await ensureUser(ctx.from!);
 
   handleVoiceIdentification(ctx).catch((err) => {
     console.error("Unhandled voice identification error:", err);

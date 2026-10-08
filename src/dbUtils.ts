@@ -171,7 +171,8 @@ export async function ensureUser(user: TelegramUser): Promise<boolean> {
     now - lastUpdated >= FIFTEEN_DAYS ||
     existing.telegramUsername !== (user.username ?? null) ||
     existing.telegramFirstName !== (user.first_name ?? null) ||
-    existing.telegramLastName !== (user.last_name ?? null)
+    existing.telegramLastName !== (user.last_name ?? null) ||
+    existing.hasBlockedBot
   ) {
     const fullName =
       [user.first_name, user.last_name].filter(Boolean).join(" ").trim() ||
@@ -185,6 +186,7 @@ export async function ensureUser(user: TelegramUser): Promise<boolean> {
         telegramFirstName: user.first_name ?? null,
         telegramLastName: user.last_name ?? null,
         name: fullName,
+        hasBlockedBot: false,
       },
     });
   }

@@ -239,6 +239,7 @@ model User {
   isVerified         Boolean            @default(false)
   isUserAnArtist     Boolean            @default(false)
   sendDailyFeatured  Boolean            @default(false)
+  hasBlockedBot   Boolean            @default(false)
   downloadPreference Int                @default(128)
   albums             Album[]
   comments           Comment[]
