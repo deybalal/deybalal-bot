@@ -1,5 +1,6 @@
 import { Bot } from "grammy";
 import prisma from "../db";
+import { startCommandKeyboard } from "./StartComamndKeyboard";
 
 export function registerFeaturedCallbacks(bot: Bot) {
   bot.callbackQuery("featured", async (ctx) => {
@@ -15,6 +16,14 @@ export function registerFeaturedCallbacks(bot: Bot) {
 
     const newSendDailyFeaturedValue = !user.sendDailyFeatured;
 
+    const inline = await startCommandKeyboard(ctx.from!.id);
+    try {
+      await ctx.editMessageReplyMarkup({
+        reply_markup: inline,
+      });
+    } catch (err) {
+      console.error("Failed to update message markup", err);
+    }
     await prisma.user.update({
       where: {
         id: user.id,

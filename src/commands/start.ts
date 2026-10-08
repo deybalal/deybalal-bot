@@ -10,6 +10,7 @@ import {
 import { sendSearchResults } from "../../tools/sendSearchResults";
 import { showSong } from "../../tools/showSong";
 import prisma from "../db";
+import { startCommandKeyboard } from "../callbacks/StartComamndKeyboard";
 
 export function registerStartCommand(bot: Bot) {
   bot.command("start", async (ctx) => {
@@ -223,34 +224,7 @@ export function registerStartCommand(bot: Bot) {
 
     const stats = await getStats();
 
-    const user = await prisma.user.findUnique({
-      where: { telegramId: BigInt(ctx.from!.id) },
-    });
-
-    const inline = new InlineKeyboard()
-      .text("🎵 موزیک تصادفی", "random")
-      .text("💡 راهنما", "help")
-      .row()
-      .text("🔍 جستجو", "search_prompt")
-      .switchInlineCurrent("🔍 جستجو اینلاین", "مسعود بختیاری")
-      .style("success")
-      .row()
-      .text("🎯 تشخیص هوشمند آهنگ", "identify")
-      .row()
-      .text("⭐علاقه‌مندی ها", "favorites:0")
-      .text("💿 آلبوم‌ها", "albums:0")
-      .row()
-      .text("📊 بیشترین بازدید", "top:0")
-      .text("🎵 بیشترین دانلود", "mostplayed:0")
-      .row()
-      .text(
-        `${user?.sendDailyFeatured ? "آهنگ روزانه ✅" : "آهنگ روزانه ❌"}`,
-        "featured"
-      )
-      .text("📝 متن آهنگ تصادفی", "randomlyric")
-      .row()
-      .text("ℹ️ درباره", "about")
-      .text("⚙️ تنظیمات", "settings");
+    const inline = await startCommandKeyboard(ctx.from!.id);
 
     let text = `🎵 خش اومیی همتبار!
 

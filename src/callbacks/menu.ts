@@ -1,6 +1,7 @@
 import { Bot } from "grammy";
 import { getPreferredQuality, setPreferredQuality, getStats } from "../dbUtils";
 import { InlineKeyboard } from "grammy";
+import { startCommandKeyboard } from "./StartComamndKeyboard";
 
 export function registerMenuCallbacks(bot: Bot) {
   bot.callbackQuery("home", async (ctx) => {
@@ -8,23 +9,7 @@ export function registerMenuCallbacks(bot: Bot) {
 
     const stats = await getStats();
 
-    const inline = new InlineKeyboard()
-      .text("🎵 موزیک تصادفی", "random")
-      .text("💡 راهنما", "help")
-      .row()
-      .text("🔍 جستجو", "search_prompt")
-      .switchInlineCurrent("🔍 جستجو اینلاین", "")
-      .row()
-      .text("⭐علاقه‌مندی ها", "favorites:0")
-      .text("💿 آلبوم‌ها", "albums:0")
-      .row()
-      .text("📊 بیشترین بازدید", "top:0")
-      .text("🎵 بیشترین دانلود", "mostplayed:0")
-      .row()
-      .text("📝 متن آهنگ تصادفی", "randomlyric")
-      .row()
-      .text("ℹ️ درباره", "about")
-      .text("⚙️ تنظیمات", "settings");
+    const inline = await startCommandKeyboard(ctx.from!.id);
 
     let text = `🎵 خش اومیی همتبار!
 
