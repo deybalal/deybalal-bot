@@ -3,6 +3,7 @@ import prisma from "../db";
 
 export function registerFeaturedCallbacks(bot: Bot) {
   bot.callbackQuery("featured", async (ctx) => {
+    await ctx.answerCallbackQuery();
     const user = await prisma.user.findUnique({
       where: { telegramId: BigInt(ctx.from!.id) },
     });
