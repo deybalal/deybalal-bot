@@ -16,14 +16,6 @@ export function registerFeaturedCallbacks(bot: Bot) {
 
     const newSendDailyFeaturedValue = !user.sendDailyFeatured;
 
-    const inline = await startCommandKeyboard(ctx.from!.id);
-    try {
-      await ctx.editMessageReplyMarkup({
-        reply_markup: inline,
-      });
-    } catch (err) {
-      console.error("Failed to update message markup", err);
-    }
     await prisma.user.update({
       where: {
         id: user.id,
@@ -32,6 +24,15 @@ export function registerFeaturedCallbacks(bot: Bot) {
         sendDailyFeatured: newSendDailyFeaturedValue,
       },
     });
+
+    const inline = await startCommandKeyboard(ctx.from!.id);
+    try {
+      await ctx.editMessageReplyMarkup({
+        reply_markup: inline,
+      });
+    } catch (err) {
+      console.error("Failed to update message markup", err);
+    }
 
     if (newSendDailyFeaturedValue) {
       await ctx.reply(
