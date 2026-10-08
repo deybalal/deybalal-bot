@@ -9,6 +9,7 @@ import {
 } from "../dbUtils";
 import { sendSearchResults } from "../../tools/sendSearchResults";
 import { showSong } from "../../tools/showSong";
+import prisma from "../db";
 
 export function registerStartCommand(bot: Bot) {
   bot.command("start", async (ctx) => {
@@ -222,6 +223,10 @@ export function registerStartCommand(bot: Bot) {
 
     const stats = await getStats();
 
+    const user = await prisma.user.findUnique({
+      where: { telegramId: BigInt(ctx.from!.id) },
+    });
+
     const inline = new InlineKeyboard()
       .text("🎵 موزیک تصادفی", "random")
       .text("💡 راهنما", "help")
@@ -238,6 +243,10 @@ export function registerStartCommand(bot: Bot) {
       .text("📊 بیشترین بازدید", "top:0")
       .text("🎵 بیشترین دانلود", "mostplayed:0")
       .row()
+      .text(
+        `${user?.sendDailyFeatured ? "آهنگ روزانه ✅" : "آهنگ روزانه ❌"}`,
+        "featured"
+      )
       .text("📝 متن آهنگ تصادفی", "randomlyric")
       .row()
       .text("ℹ️ درباره", "about")

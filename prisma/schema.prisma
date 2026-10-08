@@ -52,6 +52,7 @@ model Song {
 
   radioTracks RadioTrack[]
   telegram    Telegram?
+  songOfTheDay SongOfTheDay[]
 
   @@index([index])
   @@index([title])
@@ -237,6 +238,7 @@ model User {
   role               Role               @default(user)
   isVerified         Boolean            @default(false)
   isUserAnArtist     Boolean            @default(false)
+  sendDailyFeatured  Boolean            @default(false)
   downloadPreference Int                @default(128)
   albums             Album[]
   comments           Comment[]
@@ -451,4 +453,17 @@ model Telegram {
   updatedAt DateTime @updatedAt
 
   @@index([songId])
+}
+
+model SongOfTheDay {
+  id        String   @id @default(cuid())
+  songId    String
+  ts        Int
+  date      DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  song      Song     @relation(fields: [songId], references: [id], onDelete: Cascade)
+
+  @@index([songId])
+  @@index([date])
 }

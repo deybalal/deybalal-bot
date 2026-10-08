@@ -50,6 +50,8 @@ import { registerIdentifyCallback } from "./callbacks/identify.js";
 import { cors } from "hono/cors";
 import { registerStoryVideoCallbacks } from "./callbacks/storyVideo.js";
 import type { Artist } from "../types/types.js";
+import { registerFeaturedCallbacks } from "./callbacks/featured.js";
+import { registerFeaturedCommands } from "./commands/featured.js";
 
 const app = new Hono();
 
@@ -75,6 +77,7 @@ export function registerCommands(bot: Bot) {
   registerUpdateCommand(bot);
   registerBackupCommand(bot);
   registerHelpCommand(bot);
+  registerFeaturedCommands(bot);
 }
 
 registerCommands(bot);
@@ -92,6 +95,7 @@ export function registerCallbacks(bot: Bot) {
   registerRandomLyricCallbacks(bot);
   registerIdentifyCallback(bot);
   registerStoryVideoCallbacks(bot);
+  registerFeaturedCallbacks(bot);
 }
 
 registerCallbacks(bot);
@@ -286,6 +290,8 @@ app.post("/deploy", async (c) => {
 
     // Install new dependencies if package.json changed
     await execAsync("bun install --production", { cwd });
+    await execAsync("bunx prisma generate", { cwd });
+    await execAsync("bunx prisma migrate deploy", { cwd });
 
     await bot.api.editMessageText(
       Number(process.env.ADMIN_ID),

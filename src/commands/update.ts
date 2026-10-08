@@ -29,6 +29,8 @@ export function registerUpdateCommand(bot: Bot) {
 
       // Install new dependencies if package.json changed
       await execAsync("bun install --production", { cwd });
+      await execAsync("bunx prisma generate", { cwd });
+      await execAsync("bunx prisma migrate deploy", { cwd });
 
       await ctx.api.editMessageText(
         ctx.chat.id,
