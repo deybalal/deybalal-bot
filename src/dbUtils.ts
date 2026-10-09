@@ -200,7 +200,7 @@ export async function ensureUser(user: TelegramUser): Promise<boolean> {
 export async function getSongs(): Promise<TelegramSongWithFiles[]> {
   const songs = await prisma.song.findMany({
     where: { isActive: true, isDisabled: false },
-    include: { telegram: true },
+    include: { telegram: true, artists: true },
     orderBy: { index: "asc" },
   });
 
@@ -376,7 +376,7 @@ export async function getRandomSong(): Promise<TelegramSongWithFiles | null> {
   const song = await prisma.song.findFirst({
     where: { isActive: true, isDisabled: false },
     skip,
-    include: { telegram: true },
+    include: { telegram: true, artists: true },
   });
 
   return song ? formatSongWithTelegram(song) : null;
@@ -453,7 +453,7 @@ export async function getRandomSongByArtistId(
       artists: { some: { id: artistId } },
     },
     skip,
-    include: { telegram: true },
+    include: { telegram: true, artists: true },
   });
 
   return song ? formatSongWithTelegram(song) : null;
@@ -675,6 +675,7 @@ export async function getFavoriteSongs(
           song: {
             include: {
               telegram: true,
+              artists: true,
             },
           },
         },
@@ -750,7 +751,7 @@ export async function getTopPlayedSongs(
     where: { isActive: true, isDisabled: false },
     orderBy: { playCount: "desc" },
     take: limit,
-    include: { telegram: true },
+    include: { telegram: true, artists: true },
   });
 
   return songs.map(formatSongWithTelegram);
@@ -766,7 +767,7 @@ export async function getMostDownloadedSongs(
     where: { isActive: true, isDisabled: false },
     orderBy: { downloads: "desc" },
     take: limit,
-    include: { telegram: true },
+    include: { telegram: true, artists: true },
   });
 
   return songs.map(formatSongWithTelegram);
@@ -934,7 +935,7 @@ export async function getRandomSongWithLyrics(): Promise<TelegramSongWithFiles |
       isDisabled: false,
       lyrics: { not: null },
     },
-    include: { telegram: true },
+    include: { telegram: true, artists: true },
   });
 
   const filtered = candidates.filter((s) => (s.lyrics?.length ?? 0) >= 225);
