@@ -255,6 +255,21 @@ bot.on("message:voice", async (ctx) => {
   });
 });
 
+bot.on("message:document", async (ctx) => {
+  const doc = ctx.message.document;
+
+  if (
+    doc.mime_type === "audio/mpeg" ||
+    doc.file_name?.toLowerCase().endsWith(".mp3")
+  ) {
+    console.log("========== MP3 RECEIVED ==========");
+
+    console.log(doc);
+
+    console.log("==================================");
+  }
+});
+
 app.post(`/firsttempwebhook`, async (c) => {
   try {
     return await webhookCallback(bot, "hono")(c);
@@ -281,10 +296,12 @@ app.post(`/firsttempwebhook`, async (c) => {
 
     console.error("===================================");
 
-    try {
-      await sendErrorMessages(bot, Number(process.env.ADMIN_ID), grammyError);
-    } catch (err) {
-      console.error("Failed to send error notification:", err);
+    if (!err?.message.includes("Request timed out after")) {
+      try {
+        await sendErrorMessages(bot, Number(process.env.ADMIN_ID), grammyError);
+      } catch (err) {
+        console.error("Failed to send error notification:", err);
+      }
     }
 
     return c.text("Update Received", 200);
