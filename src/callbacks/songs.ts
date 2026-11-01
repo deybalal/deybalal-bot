@@ -77,6 +77,8 @@ export function registerSongCallbacks(bot: Bot) {
     const songId = ctx.match[1];
     const song = await getSongById(songId!);
 
+    console.log("Song ", song);
+
     if (!song) {
       await ctx.answerCallbackQuery("آهنگ مورد نظر یافت نشد!");
       return;
@@ -210,17 +212,17 @@ export function registerSongCallbacks(bot: Bot) {
       return;
     }
 
+    const selectedQuality = await getPreferredQuality(ctx.from!.id);
+
     const inline = new InlineKeyboard()
       .text("⏮ پیش نمایش", `p:${randomSong.id}`)
       .row()
       .text("🎧 نمایش", `s:${randomSong.id}`)
       .row()
-      .text("⬇ دانلود", `d:${randomSong.id}`)
+      .text("⬇ دانلود", `d:${randomSong.id}:${selectedQuality}`)
       .row()
       .text("🎵 آهنگ بعدی", "random")
       .row();
-
-    const selectedQuality = await getPreferredQuality(ctx.from!.id);
 
     const selectedDownloadPath =
       randomSong?.links?.[selectedQuality as "64" | "128" | "320"]?.url;

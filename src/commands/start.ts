@@ -230,17 +230,17 @@ export function registerStartCommand(bot: Bot) {
       return;
     }
 
+    const selectedQuality = await getPreferredQuality(ctx.from!.id);
+
     const inlineKeyboard = new InlineKeyboard()
       .text("⏮ پیش نمایش", `p:${randomSong.id}`)
       .row()
       .text("🎧 نمایش", `s:${randomSong.id}`)
       .row()
-      .text("⬇ دانلود", `d:${randomSong.id}`)
+      .text("⬇ دانلود", `d:${randomSong.id}:${selectedQuality}`)
       .row()
       .text("🎵 آهنگ بعدی", "random")
       .row();
-
-    const selectedQuality = await getPreferredQuality(ctx.from!.id);
 
     const selectedDownloadPath =
       randomSong?.links?.[selectedQuality as "64" | "128" | "320"]?.url;
