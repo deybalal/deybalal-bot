@@ -255,6 +255,21 @@ bot.on("message:voice", async (ctx) => {
   });
 });
 
+bot.on("message:audio", async (ctx) => {
+  const doc = ctx.message.audio;
+
+  if (
+    doc.mime_type === "audio/mpeg" ||
+    doc.file_name?.toLowerCase().endsWith(".mp3")
+  ) {
+    console.log("========== MP3 RECEIVED ==========");
+
+    console.log(doc);
+
+    console.log("==================================");
+  }
+});
+
 bot.on("message:document", async (ctx) => {
   const doc = ctx.message.document;
 
