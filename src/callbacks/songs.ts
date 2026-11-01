@@ -5,6 +5,7 @@ import {
   incrementSongDownloads,
   searchSongs,
   getRandomSong,
+  getPreferredQuality,
 } from "../dbUtils";
 import { showSong } from "../../tools/showSong";
 import { hashtagify } from "../../tools/hashtagify";
@@ -59,11 +60,15 @@ export function registerSongCallbacks(bot: Bot) {
     await ctx.answerCallbackQuery();
 
     const fileId = song.telegram[quality as "128" | "320" | "ogg"]?.fileId;
+    const selectedDownloadPath =
+      song?.links?.[quality as "64" | "128" | "320"]?.url;
     if (!fileId) {
       await ctx.answerCallbackQuery("کیفیت مورد نظر یافت نشد!");
       return;
     }
-    await ctx.replyWithAudio(fileId);
+    await ctx.replyWithAudio(fileId, {
+      caption: `لینک دانلود:\n${process.env.DOWNLOAD_URL}${selectedDownloadPath}`,
+    });
     await incrementSongDownloads(songId!);
   });
 
@@ -206,13 +211,22 @@ export function registerSongCallbacks(bot: Bot) {
     }
 
     const inline = new InlineKeyboard()
+      .text("⏮ پیش نمایش", `p:${randomSong.id}`)
+      .row()
       .text("🎧 نمایش", `s:${randomSong.id}`)
+      .row()
+      .text("⬇ دانلود", `d:${randomSong.id}`)
       .row()
       .text("🎵 آهنگ بعدی", "random")
       .row();
 
+    const selectedQuality = await getPreferredQuality(ctx.from!.id);
+
+    const selectedDownloadPath =
+      randomSong?.links?.[selectedQuality as "64" | "128" | "320"]?.url;
+
     await ctx.replyWithAudio(randomSong.telegram["320"]?.fileId || "", {
-      caption: `${randomSong.title} از ${randomSong.artist}`,
+      caption: `${randomSong.title} از ${randomSong.artist}\n\nلینک دانلود:\n${process.env.DOWNLOAD_URL}${selectedDownloadPath}`,
       duration: randomSong.duration,
       performer: randomSong.artistEn || "None",
       title: `${randomSong.title} از ${randomSong.artist}`,

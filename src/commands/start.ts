@@ -224,6 +224,40 @@ export function registerStartCommand(bot: Bot) {
       return await showSong(ctx, song);
     }
 
+    const randomSong = await getRandomSong();
+
+    if (!randomSong || !randomSong.telegram) {
+      return;
+    }
+
+    const inlineKeyboard = new InlineKeyboard()
+      .text("⏮ پیش نمایش", `p:${randomSong.id}`)
+      .row()
+      .text("🎧 نمایش", `s:${randomSong.id}`)
+      .row()
+      .text("⬇ دانلود", `d:${randomSong.id}`)
+      .row()
+      .text("🎵 آهنگ بعدی", "random")
+      .row();
+
+    const selectedQuality = await getPreferredQuality(ctx.from!.id);
+
+    const selectedDownloadPath =
+      randomSong?.links?.[selectedQuality as "64" | "128" | "320"]?.url;
+
+    await ctx.replyWithAudio(
+      randomSong.telegram[selectedQuality as "64" | "128" | "320"]?.fileId ||
+        "",
+      {
+        caption: `این آهنگ تقدیم به شما 🌹\n${randomSong.title} از ${randomSong.artist}\n\nلینک دانلود:\n${process.env.DOWNLOAD_URL}${selectedDownloadPath}`,
+        duration: randomSong.duration,
+        performer: randomSong.artistEn || "None",
+        title: `${randomSong.title} از ${randomSong.artist}`,
+        parse_mode: "HTML",
+        reply_markup: inlineKeyboard,
+      }
+    );
+
     const stats = await getStats();
 
     const inline = await startCommandKeyboard(ctx.from!.id);
@@ -238,6 +272,8 @@ export function registerStartCommand(bot: Bot) {
  🎤  ${stats.artists.toLocaleString()} خواننده داره!
  
 می‌تونی به فارسی یا انگلیسی، اسم آهنگ یا اسم خواننده رو برای جستوجو بفرستی، موزیک تصادفی ببینی و آهنگ‌ هارو با کیفیت‌های مختلف دانلود کنی.
+
+هر روز ساعت 13، یه آهنگ برات میفرستم! برای غیرفعال کردن این قابلیت، روی /nofeatured کلیک کن!
 
 کانال تلگرام دی بلال:\n @deybalalir
 
@@ -255,32 +291,5 @@ export function registerStartCommand(bot: Bot) {
       reply_markup: inline,
       link_preview_options: { is_disabled: true },
     });
-
-    const randomSong = await getRandomSong();
-
-    if (!randomSong || !randomSong.telegram) {
-      return;
-    }
-
-    const inlineKeyboard = new InlineKeyboard()
-      .text("🎧 نمایش", `s:${randomSong.id}`)
-      .row()
-      .text("🎵 آهنگ بعدی", "random")
-      .row();
-
-    const selectedQuality = await getPreferredQuality(ctx.from!.id);
-
-    await ctx.replyWithAudio(
-      randomSong.telegram[selectedQuality as "64" | "128" | "320"]?.fileId ||
-        "",
-      {
-        caption: `این آهنگ تقدیم به شما 🌹\n${randomSong.title} از ${randomSong.artist}`,
-        duration: randomSong.duration,
-        performer: randomSong.artistEn || "None",
-        title: `${randomSong.title} از ${randomSong.artist}`,
-        parse_mode: "HTML",
-        reply_markup: inlineKeyboard,
-      }
-    );
   });
 }

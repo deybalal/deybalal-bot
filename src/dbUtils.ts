@@ -146,6 +146,7 @@ export async function ensureUser(user: TelegramUser): Promise<boolean> {
         userSlug,
         role: "user",
         downloadPreference: 128,
+        sendDailyFeatured: true,
         playlists: {
           create: {
             id: crypto.randomUUID(),
