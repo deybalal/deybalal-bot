@@ -256,177 +256,177 @@ bot.on("message:voice", async (ctx) => {
   });
 });
 
-bot.on("message:audio", async (ctx) => {
-  const doc = ctx.message.audio;
+// bot.on("message:audio", async (ctx) => {
+//   const doc = ctx.message.audio;
 
-  if (ctx.message.from?.id != Number(process.env.ADMIN_ID)) {
-    return;
-  }
+//   if (ctx.message.from?.id != Number(process.env.ADMIN_ID)) {
+//     return;
+//   }
 
-  if (
-    doc.mime_type === "audio/mpeg" ||
-    doc.file_name?.toLowerCase().endsWith(".mp3")
-  ) {
-    console.log("========== MP3 RECEIVED ==========");
+//   if (
+//     doc.mime_type === "audio/mpeg" ||
+//     doc.file_name?.toLowerCase().endsWith(".mp3")
+//   ) {
+//     console.log("========== MP3 RECEIVED ==========");
 
-    console.log(doc);
+//     console.log(doc);
 
-    console.log("==================================");
+//     console.log("==================================");
 
-    try {
-      const fileName = (doc.file_name || "").trim();
-      if (!fileName) {
-        console.warn("⚠️ Audio file received without file_name.");
-        return;
-      }
+//     try {
+//       const fileName = (doc.file_name || "").trim();
+//       if (!fileName) {
+//         console.warn("⚠️ Audio file received without file_name.");
+//         return;
+//       }
 
-      // Extract quality (64, 128, 320) and base slug from file_name
-      // e.g. "Mahmood-Dorzadeh-Mosafere-Kovietam-320.mp3" -> slug: "Mahmood-Dorzadeh-Mosafere-Kovietam", quality: "320"
-      const match = fileName.match(/^(.*?)(?:[-_\s](64|128|320))?\.mp3$/i);
-      const baseSlug =
-        match && match[1]
-          ? match[1].trim()
-          : fileName.replace(/\.mp3$/i, "").trim();
-      const quality =
-        (match && match[2]) ||
-        (doc.file_size && doc.file_size > 50 * 1024 * 1024 ? "320" : "128");
+//       // Extract quality (64, 128, 320) and base slug from file_name
+//       // e.g. "Mahmood-Dorzadeh-Mosafere-Kovietam-320.mp3" -> slug: "Mahmood-Dorzadeh-Mosafere-Kovietam", quality: "320"
+//       const match = fileName.match(/^(.*?)(?:[-_\s](64|128|320))?\.mp3$/i);
+//       const baseSlug =
+//         match && match[1]
+//           ? match[1].trim()
+//           : fileName.replace(/\.mp3$/i, "").trim();
+//       const quality =
+//         (match && match[2]) ||
+//         (doc.file_size && doc.file_size > 50 * 1024 * 1024 ? "320" : "128");
 
-      const possibleSlugs = Array.from(
-        new Set([
-          baseSlug,
-          baseSlug.toLowerCase(),
-          baseSlug.replace(/_/g, "-"),
-          baseSlug.replace(/-/g, "_"),
-          baseSlug.replace(/\s+/g, "-"),
-        ])
-      );
+//       const possibleSlugs = Array.from(
+//         new Set([
+//           baseSlug,
+//           baseSlug.toLowerCase(),
+//           baseSlug.replace(/_/g, "-"),
+//           baseSlug.replace(/-/g, "_"),
+//           baseSlug.replace(/\s+/g, "-"),
+//         ])
+//       );
 
-      // Search database for the song
-      let song: any = await prisma.song.findFirst({
-        where: {
-          OR: [
-            { slug: { in: possibleSlugs } },
-            { slug: { equals: baseSlug, mode: "insensitive" as const } },
-            { filename: fileName },
-            { uri: { endsWith: fileName } },
-            { uri: { endsWith: `/${fileName}` } },
-          ],
-        },
-        include: {
-          telegram: true,
-        },
-      });
+//       // Search database for the song
+//       let song: any = await prisma.song.findFirst({
+//         where: {
+//           OR: [
+//             { slug: { in: possibleSlugs } },
+//             { slug: { equals: baseSlug, mode: "insensitive" as const } },
+//             { filename: fileName },
+//             { uri: { endsWith: fileName } },
+//             { uri: { endsWith: `/${fileName}` } },
+//           ],
+//         },
+//         include: {
+//           telegram: true,
+//         },
+//       });
 
-      // Fallback search if not matched directly
-      if (!song) {
-        song = await prisma.song.findFirst({
-          where: {
-            OR: [
-              { slug: { contains: baseSlug, mode: "insensitive" as const } },
-              ...(doc.title
-                ? [
-                    {
-                      title: {
-                        equals: doc.title,
-                        mode: "insensitive" as const,
-                      },
-                    },
-                    {
-                      titleEn: {
-                        equals: doc.title,
-                        mode: "insensitive" as const,
-                      },
-                    },
-                  ]
-                : []),
-            ],
-          },
-          include: {
-            telegram: true,
-          },
-        });
-      }
+//       // Fallback search if not matched directly
+//       if (!song) {
+//         song = await prisma.song.findFirst({
+//           where: {
+//             OR: [
+//               { slug: { contains: baseSlug, mode: "insensitive" as const } },
+//               ...(doc.title
+//                 ? [
+//                     {
+//                       title: {
+//                         equals: doc.title,
+//                         mode: "insensitive" as const,
+//                       },
+//                     },
+//                     {
+//                       titleEn: {
+//                         equals: doc.title,
+//                         mode: "insensitive" as const,
+//                       },
+//                     },
+//                   ]
+//                 : []),
+//             ],
+//           },
+//           include: {
+//             telegram: true,
+//           },
+//         });
+//       }
 
-      if (!song) {
-        console.warn(
-          `❌ Song not found in database for file: ${fileName} (slug: ${baseSlug})`
-        );
-        try {
-          await ctx.reply(
-            `❌ آهنگ پیدا نشد:\n<code>${fileName}</code>\n(اسلاگ: <code>${baseSlug}</code>)`,
-            {
-              parse_mode: "HTML",
-              reply_parameters: { message_id: ctx.message.message_id },
-            }
-          );
-        } catch {}
-        return;
-      }
+//       if (!song) {
+//         console.warn(
+//           `❌ Song not found in database for file: ${fileName} (slug: ${baseSlug})`
+//         );
+//         try {
+//           await ctx.reply(
+//             `❌ آهنگ پیدا نشد:\n<code>${fileName}</code>\n(اسلاگ: <code>${baseSlug}</code>)`,
+//             {
+//               parse_mode: "HTML",
+//               reply_parameters: { message_id: ctx.message.message_id },
+//             }
+//           );
+//         } catch {}
+//         return;
+//       }
 
-      // Map fields to Prisma Telegram schema just like saveTx in uploadSongs.ts
-      const fields: Record<string, string> = {};
-      if (quality === "64") {
-        fields.file_id_64 = doc.file_id;
-        fields.file_unique_id_64 = doc.file_unique_id;
-      } else if (quality === "128") {
-        fields.file_id_128 = doc.file_id;
-        fields.file_unique_id_128 = doc.file_unique_id;
-      } else if (quality === "320") {
-        fields.file_id_320 = doc.file_id;
-        fields.file_unique_id_320 = doc.file_unique_id;
-      }
+//       // Map fields to Prisma Telegram schema just like saveTx in uploadSongs.ts
+//       const fields: Record<string, string> = {};
+//       if (quality === "64") {
+//         fields.file_id_64 = doc.file_id;
+//         fields.file_unique_id_64 = doc.file_unique_id;
+//       } else if (quality === "128") {
+//         fields.file_id_128 = doc.file_id;
+//         fields.file_unique_id_128 = doc.file_unique_id;
+//       } else if (quality === "320") {
+//         fields.file_id_320 = doc.file_id;
+//         fields.file_unique_id_320 = doc.file_unique_id;
+//       }
 
-      if (Object.keys(fields).length > 0) {
-        await prisma.telegram.upsert({
-          where: { songId: song.id },
-          create: {
-            songId: song.id,
-            ...fields,
-          },
-          update: fields,
-        });
+//       if (Object.keys(fields).length > 0) {
+//         await prisma.telegram.upsert({
+//           where: { songId: song.id },
+//           create: {
+//             songId: song.id,
+//             ...fields,
+//           },
+//           update: fields,
+//         });
 
-        // Also call saveTelegramFile from dbUtils if dynamically available
-        try {
-          await saveTelegramFile(
-            song.id,
-            "audio",
-            quality,
-            doc.file_id,
-            doc.file_unique_id
-          );
-        } catch {}
+//         // Also call saveTelegramFile from dbUtils if dynamically available
+//         try {
+//           await saveTelegramFile(
+//             song.id,
+//             "audio",
+//             quality,
+//             doc.file_id,
+//             doc.file_unique_id
+//           );
+//         } catch {}
 
-        console.log(
-          `✅ Saved ${quality}kbps for "${song.artist}" - "${song.title}" (${song.slug})\n   file_id: ${doc.file_id}\n   file_unique_id: ${doc.file_unique_id}`
-        );
+//         console.log(
+//           `✅ Saved ${quality}kbps for "${song.artist}" - "${song.title}" (${song.slug})\n   file_id: ${doc.file_id}\n   file_unique_id: ${doc.file_unique_id}`
+//         );
 
-        try {
-          await ctx.reply(
-            `✅ ذخیره شد (${quality}kbps)\n🎵 <b>${song.title}</b> - ${song.artist}\n🔑 <code>${song.slug}</code>`,
-            {
-              parse_mode: "HTML",
-              reply_parameters: { message_id: ctx.message.message_id },
-            }
-          );
-        } catch {}
-      }
-    } catch (err: unknown) {
-      console.error("❌ Error processing audio file:", err);
-      try {
-        await ctx.reply(
-          `❌ خطا در پردازش و ذخیره فایل:\n<code>${
-            err instanceof Error ? err.message : String(err)
-          }</code>`,
-          {
-            parse_mode: "HTML",
-            reply_parameters: { message_id: ctx.message.message_id },
-          }
-        );
-      } catch {}
-    }
-  }
-});
+//         try {
+//           await ctx.reply(
+//             `✅ ذخیره شد (${quality}kbps)\n🎵 <b>${song.title}</b> - ${song.artist}\n🔑 <code>${song.slug}</code>`,
+//             {
+//               parse_mode: "HTML",
+//               reply_parameters: { message_id: ctx.message.message_id },
+//             }
+//           );
+//         } catch {}
+//       }
+//     } catch (err: unknown) {
+//       console.error("❌ Error processing audio file:", err);
+//       try {
+//         await ctx.reply(
+//           `❌ خطا در پردازش و ذخیره فایل:\n<code>${
+//             err instanceof Error ? err.message : String(err)
+//           }</code>`,
+//           {
+//             parse_mode: "HTML",
+//             reply_parameters: { message_id: ctx.message.message_id },
+//           }
+//         );
+//       } catch {}
+//     }
+//   }
+// });
 
 app.post(`/firsttempwebhook`, async (c) => {
   try {

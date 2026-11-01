@@ -208,7 +208,7 @@ export function registerSongCallbacks(bot: Bot) {
     const inline = new InlineKeyboard()
       .text("🎧 نمایش", `s:${randomSong.id}`)
       .row()
-      .text("🎵 موزیک بعدی", "random")
+      .text("🎵 آهنگ بعدی", "random")
       .row();
 
     await ctx.replyWithAudio(randomSong.telegram["320"]?.fileId || "", {

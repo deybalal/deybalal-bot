@@ -2,6 +2,8 @@ import { Bot, InlineKeyboard } from "grammy";
 import {
   ensureUser,
   getArtistById,
+  getPreferredQuality,
+  getRandomSong,
   getSongById,
   getSongsByArtistId,
   getStats,
@@ -240,7 +242,6 @@ export function registerStartCommand(bot: Bot) {
 کانال تلگرام دی بلال:\n @deybalalir
 
 <a href="https://github.com/deybalal/deybalal-bot"> کد منبع ربات به زبان Node JS</a>
-
  
  ✨ از اینکه از دی بلال استفاده میکنی، ممنونیم!`;
 
@@ -254,5 +255,32 @@ export function registerStartCommand(bot: Bot) {
       reply_markup: inline,
       link_preview_options: { is_disabled: true },
     });
+
+    const randomSong = await getRandomSong();
+
+    if (!randomSong || !randomSong.telegram) {
+      return;
+    }
+
+    const inlineKeyboard = new InlineKeyboard()
+      .text("🎧 نمایش", `s:${randomSong.id}`)
+      .row()
+      .text("🎵 آهنگ بعدی", "random")
+      .row();
+
+    const selectedQuality = await getPreferredQuality(ctx.from!.id);
+
+    await ctx.replyWithAudio(
+      randomSong.telegram[selectedQuality as "64" | "128" | "320"]?.fileId ||
+        "",
+      {
+        caption: `این آهنگ تقدیم به شما 🌹\n${randomSong.title} از ${randomSong.artist}`,
+        duration: randomSong.duration,
+        performer: randomSong.artistEn || "None",
+        title: `${randomSong.title} از ${randomSong.artist}`,
+        parse_mode: "HTML",
+        reply_markup: inlineKeyboard,
+      }
+    );
   });
 }
