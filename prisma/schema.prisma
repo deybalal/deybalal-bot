@@ -8,11 +8,11 @@ datasource db {
 
 model Song {
   id                  String             @id @default(cuid())
-  slug                String             @unique 
-  title               String             
-  titleEn             String             
-  artist              String             
-  artistEn            String             
+  slug                String             @unique
+  title               String
+  titleEn             String
+  artist              String
+  artistEn            String
   albumName           String?
   coverArt            String?
   year                Int                @default(0)
@@ -20,8 +20,8 @@ model Song {
   uri                 String
   filename            String?
   index               Int                @default(0)
-  lyrics              String?            
-  syncedLyrics        String?            
+  lyrics              String?
+  syncedLyrics        String?
   playCount           Int                @default(0)
   downloads           Int                @default(0)
   isDisabled          Boolean            @default(false)
@@ -34,7 +34,7 @@ model Song {
   updatedAt           DateTime           @updatedAt
   lyricsSource        String?
   lyricsSourceUrl     String?
-  links               Json?              
+  links               Json?
   ogg                 String?
   comments            Comment[]
   contributors        Contributor[]
@@ -50,8 +50,8 @@ model Song {
   similarSongs Song[] @relation("SongSimilarity")
   similarTo    Song[] @relation("SongSimilarity")
 
-  radioTracks RadioTrack[]
-  telegram    Telegram?
+  radioTracks  RadioTrack[]
+  telegram     Telegram?
   songOfTheDay SongOfTheDay[]
 
   @@index([index])
@@ -127,7 +127,7 @@ model Artist {
   albums      Album[]
   followers   Follow[]
   users       User[]
-  description String?  
+  description String?
   songs       Song[]   @relation("ArtistToSong")
 
   userId      String?
@@ -229,9 +229,9 @@ model User {
   isBanned           Boolean            @default(false)
   artistId           String?
   userIndex          Int                @unique @default(autoincrement())
-  userSlug           String             @unique @default(nanoid(10)) 
+  userSlug           String             @unique @default(nanoid(10))
   instagramHandle    String?
-  telegramId         BigInt?               @unique
+  telegramId         BigInt?            @unique
   telegramUsername   String?
   telegramFirstName  String?
   telegramLastName   String?
@@ -239,7 +239,7 @@ model User {
   isVerified         Boolean            @default(false)
   isUserAnArtist     Boolean            @default(false)
   sendDailyFeatured  Boolean            @default(false)
-  hasBlockedBot   Boolean            @default(false)
+  hasBlockedBot      Boolean            @default(false)
   downloadPreference Int                @default(128)
   albums             Album[]
   comments           Comment[]
@@ -442,9 +442,6 @@ model Telegram {
 
   cover_art_file_id        String?
   cover_art_file_unique_id String?
-
-  ogg_file_id        String?
-  ogg_file_unique_id String?
 
   has_posted     Boolean @default(false)
   message_id     Int?

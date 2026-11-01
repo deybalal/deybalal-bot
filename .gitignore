@@ -41,3 +41,5 @@ data
 temp
 
 scripts/*.json
+above50m.json
+erroredUndone.json

@@ -298,8 +298,6 @@ interface TelegramJson {
   file_unique_id_ogg?: string | null;
   cover_art_file_id?: string | null;
   cover_art_file_unique_id?: string | null;
-  ogg_file_id?: string | null;
-  ogg_file_unique_id?: string | null;
   has_posted?: boolean;
   message_id?: number | null;
   ogg_message_id?: number | null;
@@ -312,7 +310,18 @@ interface RelationLink {
   B: string;
 }
 
-interface BackupData {
+interface BackupRelations {
+  artistToSong?: RelationLink[];
+  _ArtistToSong?: RelationLink[];
+  genreToSong?: RelationLink[];
+  _GenreToSong?: RelationLink[];
+  albumToGenre?: RelationLink[];
+  _AlbumToGenre?: RelationLink[];
+  songSimilarity?: RelationLink[];
+  _SongSimilarity?: RelationLink[];
+}
+
+interface BackupData extends BackupRelations {
   users?: UserJson[];
   User?: UserJson[];
   accounts?: AccountJson[];
@@ -360,17 +369,6 @@ interface BackupData {
   Telegram?: TelegramJson[];
 
   relations?: BackupRelations;
-}
-
-interface BackupRelations {
-  artistToSong?: RelationLink[];
-  _ArtistToSong?: RelationLink[];
-  genreToSong?: RelationLink[];
-  _GenreToSong?: RelationLink[];
-  albumToGenre?: RelationLink[];
-  _AlbumToGenre?: RelationLink[];
-  songSimilarity?: RelationLink[];
-  _SongSimilarity?: RelationLink[];
 }
 
 interface BackupPayload {
@@ -433,7 +431,7 @@ async function findLatestBackupFile(): Promise<string | null> {
 
       if (matches.length > 0) {
         matches.sort().reverse();
-        return path.join(dir, matches[0]);
+        return path.join(dir, matches[0]!);
       }
     } catch {}
   }
@@ -521,7 +519,7 @@ async function main(): Promise<void> {
 
     for (let i = 0; i < list.length; i++) {
       try {
-        await processFn(list[i]);
+        await processFn(list[i]!);
         stats[modelName].success++;
       } catch (err: unknown) {
         stats[modelName].failed++;
@@ -898,7 +896,7 @@ async function main(): Promise<void> {
           index: s.index,
           lyrics: s.lyrics ?? null,
           syncedLyrics: s.syncedLyrics ?? null,
-          playCount: s.playCount ?? 0,
+          // playCount: s.playCount ?? 0,
           downloads: s.downloads ?? 0,
           isDisabled: Boolean(s.isDisabled),
           disabledDescription: s.disabledDescription ?? null,
@@ -929,7 +927,7 @@ async function main(): Promise<void> {
           index: s.index,
           lyrics: s.lyrics ?? null,
           syncedLyrics: s.syncedLyrics ?? null,
-          playCount: s.playCount ?? 0,
+          // playCount: s.playCount ?? 0,
           downloads: s.downloads ?? 0,
           isDisabled: Boolean(s.isDisabled),
           disabledDescription: s.disabledDescription ?? null,
@@ -984,8 +982,8 @@ async function main(): Promise<void> {
             file_unique_id_320: tg?.["320"]?.file_unique_id ?? null,
             cover_art_file_id: tg?.coverArt?.file_id ?? null,
             cover_art_file_unique_id: tg?.coverArt?.file_unique_id ?? null,
-            ogg_file_id: tg?.ogg?.file_id ?? null,
-            ogg_file_unique_id: tg?.ogg?.file_unique_id ?? null,
+            file_id_ogg: tg?.ogg?.file_id ?? null,
+            file_unique_id_ogg: tg?.ogg?.file_unique_id ?? null,
             has_posted: pt?.has_posted ?? false,
             message_id: pt?.message_id ?? null,
             ogg_message_id: pt?.ogg_message_id ?? null,
@@ -1000,8 +998,8 @@ async function main(): Promise<void> {
             file_unique_id_320: tg?.["320"]?.file_unique_id ?? null,
             cover_art_file_id: tg?.coverArt?.file_id ?? null,
             cover_art_file_unique_id: tg?.coverArt?.file_unique_id ?? null,
-            ogg_file_id: tg?.ogg?.file_id ?? null,
-            ogg_file_unique_id: tg?.ogg?.file_unique_id ?? null,
+            file_id_ogg: tg?.ogg?.file_id ?? null,
+            file_unique_id_ogg: tg?.ogg?.file_unique_id ?? null,
             has_posted: pt?.has_posted ?? false,
             message_id: pt?.message_id ?? null,
             ogg_message_id: pt?.ogg_message_id ?? null,
@@ -1281,14 +1279,14 @@ async function main(): Promise<void> {
         try {
           await prisma.$executeRawUnsafe(
             `INSERT INTO \"${tableName}\" (\"A\", \"B\") VALUES ($1, $2) ON CONFLICT DO NOTHING`,
-            item.A,
-            item.B
+            item!.A,
+            item!.B
           );
           successCount++;
         } catch {
           if (fallbackFn) {
             try {
-              await fallbackFn(item);
+              await fallbackFn(item!);
               successCount++;
             } catch {
               errorCount++;

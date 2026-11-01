@@ -109,14 +109,12 @@ async function main(): Promise<void> {
               file_unique_id: telegram.cover_art_file_unique_id,
             }
           : null,
-        ogg:
-          telegram?.ogg_file_id || telegram?.file_id_ogg
-            ? {
-                file_id: telegram.ogg_file_id || telegram.file_id_ogg,
-                file_unique_id:
-                  telegram.ogg_file_unique_id || telegram.file_unique_id_ogg,
-              }
-            : null,
+        ogg: telegram?.file_id_ogg
+          ? {
+              file_id: telegram.file_id_ogg,
+              file_unique_id: telegram.file_unique_id_ogg,
+            }
+          : null,
       };
 
       const postObj = {

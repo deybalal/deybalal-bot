@@ -1,5 +1,4 @@
 import * as fuzzysort from "fuzzysort";
-import { prisma } from "./db";
 import type {
   Artist,
   SearchResult,
@@ -9,8 +8,9 @@ import type {
   TelegramSongWithFiles,
   TelegramUser,
 } from "../types/types";
-import { lyricSnippet } from "../tools/lyricsSnippet";
+import { lyricSnippet } from "../tools/lyricsSnippet.ts";
 import crypto from "crypto";
+import prisma from "./db.ts";
 
 /**
  * Normalizes a database Song object (with its related Telegram record)
@@ -22,9 +22,8 @@ export function formatSongWithTelegram(song: any): TelegramSongWithFiles {
   const coverArtFileId = tg?.cover_art_file_id || null;
   const coverArtFileUniqueId = tg?.cover_art_file_unique_id || "";
 
-  const oggFileId = tg?.file_id_ogg || tg?.ogg_file_id || null;
-  const oggFileUniqueId =
-    tg?.file_unique_id_ogg || tg?.ogg_file_unique_id || "";
+  const oggFileId = tg?.file_id_ogg || null;
+  const oggFileUniqueId = tg?.file_unique_id_ogg || "";
 
   const file64Id = tg?.file_id_64 || null;
   const file64UniqueId = tg?.file_unique_id_64 || "";
@@ -248,8 +247,8 @@ export async function getTelegramFile(
     fileId = tg.cover_art_file_id;
     fileUniqueId = tg.cover_art_file_unique_id || "";
   } else if (type === "voice") {
-    fileId = tg.file_id_ogg || tg.ogg_file_id;
-    fileUniqueId = tg.file_unique_id_ogg || tg.ogg_file_unique_id || "";
+    fileId = tg.file_id_ogg;
+    fileUniqueId = tg.file_unique_id_ogg || "";
   } else if (type === "audio") {
     const q = String(quality || "").trim();
     if (q === "64") {
@@ -296,8 +295,6 @@ export async function saveTelegramFile(
   } else if (type === "voice") {
     data.file_id_ogg = fileId;
     data.file_unique_id_ogg = fileUniqueId;
-    data.ogg_file_id = fileId;
-    data.ogg_file_unique_id = fileUniqueId;
   } else if (type === "audio") {
     const q = String(quality || "").trim();
     if (q === "64") {
@@ -338,8 +335,6 @@ export async function deleteTelegramFile(
   } else if (type === "voice") {
     data.file_id_ogg = null;
     data.file_unique_id_ogg = null;
-    data.ogg_file_id = null;
-    data.ogg_file_unique_id = null;
   } else if (type === "audio") {
     const q = String(quality || "").trim();
     if (q === "64") {
