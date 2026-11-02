@@ -228,9 +228,12 @@ bot.on("message:text", async (ctx) => {
   const rangeHandled = await handleRangeInput(ctx);
   if (rangeHandled) return;
 
+  console.log("Above ensure User", Math.floor(new Date().getTime() / 1000));
   await ensureUser(ctx.from!);
+  console.log("Below ensure User", Math.floor(new Date().getTime() / 1000));
 
   const results = await searchSongs(text);
+  console.log("Below results", Math.floor(new Date().getTime() / 1000));
 
   if (results.length === 0) {
     await ctx.reply(`🔍 نتیجه‌ای برای "<b>${text}</b>" پیدا نشد.`, {
@@ -240,6 +243,7 @@ bot.on("message:text", async (ctx) => {
   }
 
   await sendSearchResults(ctx, text, 0, results);
+  console.log("Below send Search", Math.floor(new Date().getTime() / 1000));
 });
 
 bot.on("message:voice", async (ctx) => {

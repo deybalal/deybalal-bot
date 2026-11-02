@@ -1,5 +1,5 @@
 import { Prisma } from "@prisma/client";
-import { getStringSimilarity } from "./utils";
+import { getStringSimilarity } from "./getStringSimilarity";
 
 /**
  * Standardize Persian & Arabic text:
@@ -148,10 +148,30 @@ export function calculateRelevance(
   parsed: ParsedSearchQuery,
   item: ScorableItem
 ): { score: number; coverage: number } {
-  const mainText = typeof item.title === "string" ? item.title : typeof item.name === "string" ? item.name : "";
-  const mainEn = typeof item.titleEn === "string" ? item.titleEn : typeof item.nameEn === "string" ? item.nameEn : "";
-  const artistText = typeof item.artist === "string" ? item.artist : typeof item.artistName === "string" ? item.artistName : "";
-  const artistEn = typeof item.artistEn === "string" ? item.artistEn : typeof item.artistNameEn === "string" ? item.artistNameEn : "";
+  const mainText =
+    typeof item.title === "string"
+      ? item.title
+      : typeof item.name === "string"
+      ? item.name
+      : "";
+  const mainEn =
+    typeof item.titleEn === "string"
+      ? item.titleEn
+      : typeof item.nameEn === "string"
+      ? item.nameEn
+      : "";
+  const artistText =
+    typeof item.artist === "string"
+      ? item.artist
+      : typeof item.artistName === "string"
+      ? item.artistName
+      : "";
+  const artistEn =
+    typeof item.artistEn === "string"
+      ? item.artistEn
+      : typeof item.artistNameEn === "string"
+      ? item.artistNameEn
+      : "";
   const albumText = typeof item.albumName === "string" ? item.albumName : "";
 
   const normMain = normalizePersianText(mainText);
@@ -161,9 +181,13 @@ export function calculateRelevance(
   const normAlbum = normalizePersianText(albumText);
 
   // Combined text representations
-  const combinedForward = `${normMain} ${normMainEn} ${normArtist} ${normArtistEn} ${normAlbum}`.trim();
-  const combinedReverse = `${normArtist} ${normArtistEn} ${normMain} ${normMainEn} ${normAlbum}`.trim();
-  const combinedWords = `${combinedForward} ${combinedReverse}`.split(/\s+/).filter(Boolean);
+  const combinedForward =
+    `${normMain} ${normMainEn} ${normArtist} ${normArtistEn} ${normAlbum}`.trim();
+  const combinedReverse =
+    `${normArtist} ${normArtistEn} ${normMain} ${normMainEn} ${normAlbum}`.trim();
+  const combinedWords = `${combinedForward} ${combinedReverse}`
+    .split(/\s+/)
+    .filter(Boolean);
 
   let score = 0;
   const qNorm = parsed.normalized;
@@ -238,7 +262,8 @@ export function calculateRelevance(
     }
   }
 
-  const coverage = tokens.length > 0 ? Math.min(matchedTokensCount / tokens.length, 1) : 0;
+  const coverage =
+    tokens.length > 0 ? Math.min(matchedTokensCount / tokens.length, 1) : 0;
 
   // Reward high coverage heavily: 100% token coverage gets +70 points
   if (coverage >= 0.99) {
@@ -275,9 +300,13 @@ export function buildSongSearchWhere(
 } {
   const scopeCondition: Prisma.SongWhereInput = {
     isActive: true,
-    ...(scope?.type === "artist" ? { artists: { some: { id: scope.id } } } : {}),
+    ...(scope?.type === "artist"
+      ? { artists: { some: { id: scope.id } } }
+      : {}),
     ...(scope?.type === "album" ? { albumId: scope.id } : {}),
-    ...(scope?.type === "playlist" ? { playlists: { some: { playlistId: scope.id } } } : {}),
+    ...(scope?.type === "playlist"
+      ? { playlists: { some: { playlistId: scope.id } } }
+      : {}),
   };
 
   const tokens = parsed.coreTokens;
@@ -296,10 +325,7 @@ export function buildSongSearchWhere(
         {
           artists: {
             some: {
-              OR: [
-                { name: { contains: v } },
-                { nameEn: { contains: v } },
-              ],
+              OR: [{ name: { contains: v } }, { nameEn: { contains: v } }],
             },
           },
         },
@@ -411,7 +437,9 @@ export function buildAlbumSearchWhere(
 /**
  * Builds Prisma WhereInput for Artists
  */
-export function buildArtistSearchWhere(parsed: ParsedSearchQuery): Prisma.ArtistWhereInput {
+export function buildArtistSearchWhere(
+  parsed: ParsedSearchQuery
+): Prisma.ArtistWhereInput {
   const tokens = parsed.coreTokens;
   const rawVariants = getTokenVariants(parsed.raw);
 
@@ -440,7 +468,9 @@ export function buildArtistSearchWhere(parsed: ParsedSearchQuery): Prisma.Artist
 /**
  * Builds Prisma WhereInput for Playlists
  */
-export function buildPlaylistSearchWhere(parsed: ParsedSearchQuery): Prisma.PlaylistWhereInput {
+export function buildPlaylistSearchWhere(
+  parsed: ParsedSearchQuery
+): Prisma.PlaylistWhereInput {
   const tokens = parsed.coreTokens;
   const rawVariants = getTokenVariants(parsed.raw);
 
@@ -470,4 +500,3 @@ export function buildPlaylistSearchWhere(parsed: ParsedSearchQuery): Prisma.Play
     ],
   };
 }
-

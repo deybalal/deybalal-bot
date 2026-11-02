@@ -60,6 +60,12 @@ model Song {
   @@index([albumId])
   @@index([createdAt])
   @@index([slug])
+
+  @@index([title(ops: raw("gin_trgm_ops"))], type: Gin, map: "song_title_trgm_idx")
+  @@index([artist(ops: raw("gin_trgm_ops"))], type: Gin, map: "song_artist_trgm_idx")
+  @@index([albumName(ops: raw("gin_trgm_ops"))], type: Gin, map: "song_album_trgm_idx")
+  @@index([titleEn(ops: raw("gin_trgm_ops"))], type: Gin, map: "song_title_en_trgm_idx")
+  @@index([artistEn(ops: raw("gin_trgm_ops"))], type: Gin, map: "song_artist_en_trgm_idx")
 }
 
 model SongCrew {
@@ -141,6 +147,9 @@ model Artist {
   @@index([igFollowers])
   @@index([nameEn])
   @@index([userId])
+
+  @@index([name(ops: raw("gin_trgm_ops"))], type: Gin, map: "artist_name_trgm_idx")
+  @@index([nameEn(ops: raw("gin_trgm_ops"))], type: Gin, map: "artist_name_en_trgm_idx")
 }
 
 model Follow {
