@@ -228,12 +228,9 @@ bot.on("message:text", async (ctx) => {
   const rangeHandled = await handleRangeInput(ctx);
   if (rangeHandled) return;
 
-  console.log("Above ensure User", Math.floor(new Date().getTime() / 1000));
   await ensureUser(ctx.from!);
-  console.log("Below ensure User", Math.floor(new Date().getTime() / 1000));
 
   const results = await searchSongs(text);
-  console.log("Below results", Math.floor(new Date().getTime() / 1000));
 
   if (results.length === 0) {
     await ctx.reply(`🔍 نتیجه‌ای برای "<b>${text}</b>" پیدا نشد.`, {
@@ -436,7 +433,7 @@ bot.on("message:voice", async (ctx) => {
 app.post(`/firsttempwebhook`, async (c) => {
   try {
     return await webhookCallback(bot, "hono", {
-      timeoutMilliseconds: 20_000,
+      timeoutMilliseconds: 40_000,
     })(c);
   } catch (error) {
     console.error("========== WEBHOOK ERROR ==========");

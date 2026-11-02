@@ -124,6 +124,15 @@ async function getOrCreateUserFavoritePlaylist(telegramId: number) {
 export async function ensureUser(user: TelegramUser): Promise<boolean> {
   const existing = await prisma.user.findUnique({
     where: { telegramId: BigInt(user.id) },
+    select: {
+      id: true,
+      name: true,
+      telegramUsername: true,
+      telegramFirstName: true,
+      telegramLastName: true,
+      hasBlockedBot: true,
+      updatedAt: true,
+    },
   });
 
   if (!existing) {
