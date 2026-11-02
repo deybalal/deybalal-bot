@@ -145,16 +145,6 @@ bot.on("inline_query", async (ctx) => {
       const selectedDownloadPath =
         result.song?.links?.[preferredQuality as "64" | "128" | "320"]?.url;
 
-      const inline = new InlineKeyboard()
-        .text("⏮ پیش نمایش", `p:${result.song.id}`)
-        .row()
-        .text("🎧 نمایش", `s:${result.song.id}`)
-        .row()
-        .text("⬇ دانلود", `d:${result.song.id}:${preferredQuality}`)
-        .row()
-        .text("🎵 آهنگ بعدی", "random")
-        .row();
-
       const artists = result.song.artists as Artist[];
 
       validResults.push({
@@ -174,7 +164,6 @@ bot.on("inline_query", async (ctx) => {
           )
           .join(" و ")}`,
         parse_mode: "HTML",
-        reply_markup: inline,
       });
     }
 
@@ -442,7 +431,9 @@ bot.on("message:voice", async (ctx) => {
 
 app.post(`/firsttempwebhook`, async (c) => {
   try {
-    return await webhookCallback(bot, "hono")(c);
+    return await webhookCallback(bot, "hono", {
+      timeoutMilliseconds: 20_000,
+    })(c);
   } catch (error) {
     console.error("========== WEBHOOK ERROR ==========");
 

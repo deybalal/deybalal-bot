@@ -11,6 +11,14 @@ import type {
 import { lyricSnippet } from "../tools/lyricsSnippet.ts";
 import crypto from "crypto";
 import prisma from "./db.ts";
+import {
+  getTokenVariants,
+  normalizePersianText,
+  parseSearchQuery,
+} from "../tools/search-utils.ts";
+import type { Prisma } from "@prisma/client";
+import { getStringSimilarity } from "../tools/getStringSimilarity.ts";
+import { PERSIAN_STOP_WORDS } from "../tools/constants.ts";
 
 /**
  * Normalizes a database Song object (with its related Telegram record)
@@ -350,12 +358,10 @@ export async function deleteTelegramFile(
     }
   }
 
-  return await prisma.telegram
-    .update({
-      where: { songId },
-      data,
-    })
-    .catch(() => null);
+  return await prisma.telegram.update({
+    where: { songId },
+    data,
+  });
 }
 
 /**
@@ -421,7 +427,7 @@ export async function getSongsByArtistId(artistId: string): Promise<Song[]> {
   return songs.map((s) => ({
     ...s,
     songIndex: s.index,
-    links: s.links as SongLinks | null,
+    links: s.links as unknown as SongLinks | null,
   }));
 }
 
@@ -464,79 +470,491 @@ export async function searchSongs(
 ): Promise<SearchResult[]> {
   if (!query || !query.trim()) return [];
 
-  const cleanQuery = query.trim();
+  const rawQuery = query.trim();
+  const parsed = parseSearchQuery(rawQuery);
 
-  // Try matching candidate songs directly from PostgreSQL
-  const matchedSongs = await prisma.song.findMany({
-    where: {
-      isActive: true,
-      isDisabled: false,
-      OR: [
-        { title: { contains: cleanQuery } },
-        { titleEn: { contains: cleanQuery } },
-        { artist: { contains: cleanQuery } },
-        { artistEn: { contains: cleanQuery } },
-        { lyrics: { contains: cleanQuery } },
-      ],
-    },
-    take: 100,
-    include: { artists: true },
-    orderBy: { playCount: "desc" },
-  });
-
-  let candidates = matchedSongs.map((s: { index: any }) => ({
-    ...s,
-    songIndex: s.index,
-  }));
-
-  // If no direct substring matches, fallback to top played songs for fuzzy matching
-  if (candidates.length === 0) {
-    const fallback = await prisma.song.findMany({
-      where: { isActive: true, isDisabled: false },
-      take: 200,
-      include: { artists: true },
-      orderBy: { playCount: "desc" },
-    });
-    candidates = fallback.map((s: { index: any }) => ({
-      ...s,
-      songIndex: s.index,
-    }));
+  if (!parsed.raw) {
+    return [];
   }
 
-  const results = fuzzysort.go(cleanQuery, candidates, {
-    keys: ["title", "titleEn", "artist", "artistEn", "lyrics"],
-    limit,
+  // Filter out single-letter tokens and stop words unless entire query was a stop word
+  const rawTokens = parsed.allTokens;
+  const filteredTokens = rawTokens.filter(
+    (t) =>
+      (t.length > 1 || rawTokens.length === 1) && !PERSIAN_STOP_WORDS.has(t)
+  );
+  const coreTokens = filteredTokens.length > 0 ? filteredTokens : rawTokens;
+
+  if (coreTokens.length === 0) {
+    return [];
+  }
+
+  const { normalized } = parsed;
+  const cleanPhrase = coreTokens.join(" ");
+  const cleanPhraseNorm = normalizePersianText(cleanPhrase);
+  const noSpaceQuery = normalized.replace(/\s+/g, "");
+  const noSpacePhrase = cleanPhraseNorm.replace(/\s+/g, "");
+
+  // 1. Build High-Precision conditions
+  // Full phrase condition (with orthographic variants)
+  const fullPhraseVariants = Array.from(
+    new Set([...getTokenVariants(rawQuery), ...getTokenVariants(cleanPhrase)])
+  );
+
+  const fullPhraseCondition: Prisma.SongWhereInput = {
+    OR: fullPhraseVariants.flatMap((v) => [
+      { title: { contains: v, mode: "insensitive" } },
+      { artist: { contains: v, mode: "insensitive" } },
+      { albumName: { contains: v, mode: "insensitive" } },
+      { titleEn: { contains: v, mode: "insensitive" } },
+      { artistEn: { contains: v, mode: "insensitive" } },
+      {
+        artists: {
+          some: {
+            OR: [
+              { name: { contains: v, mode: "insensitive" } },
+              { nameEn: { contains: v, mode: "insensitive" } },
+            ],
+          },
+        },
+      },
+      { lyrics: { contains: v } },
+    ]),
+  };
+
+  // Per-token conditions
+  const tokenConditions: Prisma.SongWhereInput[] = coreTokens.map((token) => {
+    const variants = getTokenVariants(token);
+    return {
+      OR: variants.flatMap((v) => [
+        { title: { contains: v, mode: "insensitive" } },
+        { artist: { contains: v, mode: "insensitive" } },
+        { albumName: { contains: v, mode: "insensitive" } },
+        { titleEn: { contains: v, mode: "insensitive" } },
+        { artistEn: { contains: v, mode: "insensitive" } },
+        {
+          artists: {
+            some: {
+              OR: [
+                { name: { contains: v, mode: "insensitive" } },
+                { nameEn: { contains: v, mode: "insensitive" } },
+              ],
+            },
+          },
+        },
+        // Only search lyrics if token is at least 3 chars to prevent huge false positive matches
+        ...(v.length >= 3 ? [{ lyrics: { contains: v } }] : []),
+      ]),
+    };
   });
 
-  return results.map((r: any) => {
-    let reason: SearchResult["reason"] = "lyrics";
-    const keys = r.obj;
+  // High-precision query: song matches full phrase OR every token in query matches at least one field
+  const highPrecisionWhere: Prisma.SongWhereInput = {
+    isActive: true,
+    isDisabled: false,
+    OR: [
+      fullPhraseCondition,
+      ...(coreTokens.length > 1 ? [{ AND: tokenConditions }] : []),
+      ...(coreTokens.length === 1 ? tokenConditions : []),
+    ],
+  };
+
+  const highPrecisionCandidates = await prisma.song.findMany({
+    where: highPrecisionWhere,
+    take: 60,
+    include: {
+      artists: true,
+      telegram: true,
+    },
+    orderBy: [{ playCount: "desc" }],
+  });
+
+  let allCandidates = [...highPrecisionCandidates];
+
+  // 2. Broad Recall if candidates are sparse and multi-word query (>= 3 words)
+  if (allCandidates.length < 15 && coreTokens.length >= 3) {
+    const existingIds = new Set(allCandidates.map((s) => s.id));
+    const broadConditions: Prisma.SongWhereInput[] = [];
+
+    // Check pairs of tokens ONLY against title and artist (NEVER lyrics in broad recall to prevent noise)
+    const titleArtistTokenConditions: Prisma.SongWhereInput[] = coreTokens.map(
+      (token) => {
+        const variants = getTokenVariants(token);
+        return {
+          OR: variants.flatMap((v) => [
+            { title: { contains: v, mode: "insensitive" } },
+            { artist: { contains: v, mode: "insensitive" } },
+            { albumName: { contains: v, mode: "insensitive" } },
+            { titleEn: { contains: v, mode: "insensitive" } },
+            { artistEn: { contains: v, mode: "insensitive" } },
+            {
+              artists: {
+                some: {
+                  OR: [
+                    { name: { contains: v, mode: "insensitive" } },
+                    { nameEn: { contains: v, mode: "insensitive" } },
+                  ],
+                },
+              },
+            },
+          ]),
+        };
+      }
+    );
+
+    const maxTokens = Math.min(coreTokens.length, 5);
+    for (let i = 0; i < maxTokens; i++) {
+      for (let j = i + 1; j < maxTokens; j++) {
+        broadConditions.push({
+          AND: [titleArtistTokenConditions[i], titleArtistTokenConditions[j]],
+        });
+      }
+    }
+
+    if (broadConditions.length > 0) {
+      const broadCandidates = await prisma.song.findMany({
+        where: {
+          isActive: true,
+          isDisabled: false,
+          id: { notIn: Array.from(existingIds) },
+          OR: broadConditions,
+        },
+        take: 30,
+        include: {
+          artists: true,
+          telegram: true,
+        },
+        orderBy: [{ playCount: "desc" }],
+      });
+
+      allCandidates.push(...broadCandidates);
+    }
+  }
+
+  // If no candidates found from intelligent DB matching, return empty immediately
+  if (allCandidates.length === 0) {
+    return [];
+  }
+
+  // 3. Score each candidate
+  interface ScoredCandidate {
+    song: any;
+    score: number;
+    coverage: number;
+    titleTokensCount: number;
+    artistTokensCount: number;
+    reason: "title" | "artist" | "lyrics";
+    snippet?: string;
+  }
+
+  const isLatinQuery = /[a-zA-Z]/.test(rawQuery);
+  const rawQueryLower = rawQuery.toLowerCase();
+
+  let scoredList: ScoredCandidate[] = [];
+
+  for (const song of allCandidates) {
+    const title = song.title || "";
+    const titleEn = song.titleEn || "";
+    const artist = song.artist || "";
+    const artistEn = song.artistEn || "";
+    const album = song.albumName || "";
+    const lyrics = song.lyrics || "";
+
+    const titleNorm = normalizePersianText(title);
+    const titleEnNorm = titleEn.toLowerCase().trim();
+    const artistNorm = normalizePersianText(artist);
+    const artistEnNorm = artistEn.toLowerCase().trim();
+    const albumNorm = normalizePersianText(album);
+    const lyricsNorm = normalizePersianText(lyrics);
+
+    const artistRelNames = (song.artists || []).map((a: any) =>
+      normalizePersianText(a.name || "")
+    );
+    const artistRelNamesEn = (song.artists || []).map((a: any) =>
+      (a.nameEn || "").toLowerCase().trim()
+    );
+
+    const allArtistsNorm = [artistNorm, ...artistRelNames]
+      .filter(Boolean)
+      .join(" ");
+    const allArtistsEnNorm = [artistEnNorm, ...artistRelNamesEn]
+      .filter(Boolean)
+      .join(" ");
+
+    const titleNoSpace = titleNorm.replace(/\s+/g, "");
+    const artistNoSpace = artistNorm.replace(/\s+/g, "");
+    const allArtistsNoSpace = allArtistsNorm.replace(/\s+/g, "");
+
+    let score = 0;
+    let titleHit = false;
+    let artistHit = false;
+    let lyricsHit = false;
+
+    // A. Exact Matches
+    const isExactTitle =
+      titleNorm === normalized ||
+      titleNorm === cleanPhraseNorm ||
+      (noSpaceQuery.length > 2 && titleNoSpace === noSpaceQuery) ||
+      (noSpacePhrase.length > 2 && titleNoSpace === noSpacePhrase);
+
+    const isExactArtist =
+      artistNorm === normalized ||
+      artistNorm === cleanPhraseNorm ||
+      (noSpaceQuery.length > 2 && artistNoSpace === noSpaceQuery) ||
+      allArtistsNorm === normalized;
+
+    if (isExactTitle) {
+      score += 350;
+      titleHit = true;
+    }
+
+    if (isExactArtist) {
+      score += 260;
+      artistHit = true;
+    }
+
+    if (albumNorm === normalized || albumNorm === cleanPhraseNorm) {
+      score += 160;
+    }
+
+    // Latin Exact Matches
+    if (isLatinQuery) {
+      if (titleEnNorm === rawQueryLower) {
+        score += 320;
+        titleHit = true;
+      }
+      if (
+        allArtistsEnNorm === rawQueryLower ||
+        artistEnNorm === rawQueryLower
+      ) {
+        score += 260;
+        artistHit = true;
+      }
+    }
+
+    // B. Prefix Matches
+    if (
+      titleNorm.startsWith(normalized) ||
+      titleNorm.startsWith(cleanPhraseNorm) ||
+      (isLatinQuery && titleEnNorm.startsWith(rawQueryLower))
+    ) {
+      score += 150;
+      titleHit = true;
+    }
 
     if (
-      keys.title?.toLowerCase().includes(cleanQuery.toLowerCase()) ||
-      keys.titleEn?.toLowerCase().includes(cleanQuery.toLowerCase())
+      allArtistsNorm.startsWith(normalized) ||
+      (isLatinQuery && allArtistsEnNorm.startsWith(rawQueryLower))
     ) {
-      reason = "title";
-    } else if (
-      keys.artist?.toLowerCase().includes(cleanQuery.toLowerCase()) ||
-      keys.artistEn?.toLowerCase().includes(cleanQuery.toLowerCase())
-    ) {
-      reason = "artist";
+      score += 100;
+      artistHit = true;
     }
 
-    if (reason === "lyrics") {
-      return {
-        song: r.obj,
-        reason,
-        snippet: lyricSnippet(r.obj.lyrics || "", cleanQuery),
-      };
-    } else {
-      return {
-        song: r.obj,
-        reason,
-      };
+    // C. Substring Phrase Matches
+    if (
+      titleNorm.includes(normalized) ||
+      titleNorm.includes(cleanPhraseNorm) ||
+      (noSpaceQuery.length > 3 && titleNoSpace.includes(noSpaceQuery)) ||
+      (isLatinQuery && titleEnNorm.includes(rawQueryLower))
+    ) {
+      score += 110;
+      titleHit = true;
     }
-  });
+
+    if (
+      allArtistsNorm.includes(normalized) ||
+      allArtistsNorm.includes(cleanPhraseNorm) ||
+      (noSpaceQuery.length > 3 && allArtistsNoSpace.includes(noSpaceQuery)) ||
+      (isLatinQuery && allArtistsEnNorm.includes(rawQueryLower))
+    ) {
+      score += 80;
+      artistHit = true;
+    }
+
+    if (albumNorm.includes(normalized)) {
+      score += 40;
+    }
+
+    // Full phrase in lyrics
+    const phraseInLyrics =
+      lyricsNorm.length > 0 &&
+      (lyricsNorm.includes(normalized) ||
+        (cleanPhraseNorm.length >= 4 && lyricsNorm.includes(cleanPhraseNorm)));
+
+    if (phraseInLyrics) {
+      score += 60;
+      lyricsHit = true;
+    }
+
+    // D. Token Analysis
+    let titleTokensCount = 0;
+    let artistTokensCount = 0;
+    let albumTokensCount = 0;
+    let lyricsTokensCount = 0;
+    let totalMatchedTokens = 0;
+
+    const allTitleArtistWords = `${titleNorm} ${allArtistsNorm}`
+      .split(/\s+/)
+      .filter((w) => w.length > 0);
+
+    for (const token of coreTokens) {
+      const tokenNorm = normalizePersianText(token);
+      const tokenNoSpace = tokenNorm.replace(/\s+/g, "");
+      const tokenLower = token.toLowerCase();
+
+      const inTitle =
+        titleNorm.includes(tokenNorm) ||
+        (tokenNoSpace.length > 2 && titleNoSpace.includes(tokenNoSpace)) ||
+        (isLatinQuery && titleEnNorm.includes(tokenLower));
+
+      const inArtist =
+        allArtistsNorm.includes(tokenNorm) ||
+        (tokenNoSpace.length > 2 && allArtistsNoSpace.includes(tokenNoSpace)) ||
+        (isLatinQuery && allArtistsEnNorm.includes(tokenLower));
+
+      const inAlbum = albumNorm.includes(tokenNorm);
+
+      const inLyrics = tokenNorm.length >= 3 && lyricsNorm.includes(tokenNorm);
+
+      if (inTitle) {
+        titleTokensCount++;
+        totalMatchedTokens++;
+        score += 45;
+        titleHit = true;
+      } else if (inArtist) {
+        artistTokensCount++;
+        totalMatchedTokens++;
+        score += 35;
+        artistHit = true;
+      } else if (inAlbum) {
+        albumTokensCount++;
+        totalMatchedTokens++;
+        score += 20;
+      } else if (inLyrics) {
+        lyricsTokensCount++;
+        totalMatchedTokens++;
+        score += 15;
+        lyricsHit = true;
+      } else {
+        // Fuzzy Levenshtein check against individual words of title & artist
+        let bestSim = 0;
+        for (const w of allTitleArtistWords) {
+          if (Math.abs(w.length - tokenNorm.length) <= 2) {
+            const sim = getStringSimilarity(tokenNorm, w);
+            if (sim > bestSim) bestSim = sim;
+          }
+        }
+        if (bestSim >= 0.78) {
+          totalMatchedTokens += bestSim;
+          score += 28 * bestSim;
+          titleHit = true;
+        }
+      }
+    }
+
+    // E. Composite Query Bonus (e.g. "Artist Title")
+    if (coreTokens.length > 1) {
+      if (titleTokensCount > 0 && artistTokensCount > 0) {
+        // Incredible composite match! The user searched both the artist and the song title!
+        score += 220;
+      }
+    }
+
+    // F. Coverage Calculation & Penalty
+    const coverage =
+      coreTokens.length > 0
+        ? Math.min(totalMatchedTokens / coreTokens.length, 1)
+        : 0;
+
+    if (coverage >= 0.99) {
+      score += 90; // All words found!
+    } else {
+      score += coverage * 45;
+    }
+
+    // Strict penalty for multi-token queries when coverage is poor
+    if (coreTokens.length > 1 && coverage < 0.5) {
+      score -= 75;
+    }
+
+    // G. Popularity Tiebreaker (log-scaled)
+    const playCount = Number(song.playCount) || 0;
+    if (playCount > 0) {
+      score += Math.min(Math.log10(playCount + 1) * 3.5, 18);
+    }
+
+    // Strict Relevancy Filtering: Drop irrelevant items!
+    // For queries with >= 3 tokens, require at least 2 tokens matched!
+    if (coreTokens.length >= 3 && totalMatchedTokens < 2) continue;
+
+    // For queries with >= 2 tokens, require at least 50% token coverage!
+    if (coreTokens.length >= 2 && coverage < 0.5) continue;
+
+    // For queries that only matched lyrics, require either full phrase or >= 70% coverage
+    if (!titleHit && !artistHit && !isExactTitle && !isExactArtist) {
+      if (!phraseInLyrics && coverage < 0.7) continue;
+    }
+
+    // Minimum absolute score threshold
+    if (score < 40) continue;
+    if (coreTokens.length >= 2 && coverage < 0.75 && score < 120) continue;
+
+    // H. Determine Search Reason
+    let reason: "title" | "artist" | "lyrics" = "title";
+    if (titleHit || isExactTitle) {
+      reason = "title";
+    } else if (artistHit || isExactArtist) {
+      reason = "artist";
+    } else if (lyricsHit || phraseInLyrics) {
+      reason = "lyrics";
+    }
+
+    // I. Snippet for lyrics matches
+    let snippet: string | undefined;
+    if (reason === "lyrics" || (phraseInLyrics && lyrics)) {
+      snippet = lyricSnippet(lyrics, cleanPhraseNorm || rawQuery);
+    }
+
+    scoredList.push({
+      song,
+      score,
+      coverage,
+      titleTokensCount,
+      artistTokensCount,
+      reason,
+      snippet,
+    });
+  }
+
+  // If there are true composite matches (matching BOTH title and artist) for a multi-word query,
+  // prioritize them over songs that only matched the artist or only the title.
+  const hasComposite = scoredList.some(
+    (c) => c.titleTokensCount > 0 && c.artistTokensCount > 0
+  );
+  if (hasComposite && coreTokens.length >= 3) {
+    const topScore =
+      scoredList.sort((a, b) => b.score - a.score)[0]?.score || 0;
+    scoredList = scoredList.filter(
+      (c) =>
+        (c.titleTokensCount > 0 && c.artistTokensCount > 0) ||
+        c.score >= topScore * 0.65
+    );
+  }
+
+  // 4. Sort by score descending and return
+  scoredList.sort((a, b) => b.score - a.score);
+
+  return scoredList.slice(0, limit).map((item) => ({
+    song: {
+      ...item.song,
+      songIndex: item.song.index ?? 0,
+      links: item.song.links as unknown as SongLinks | null,
+    },
+    reason: item.reason,
+    ...(item.reason === "lyrics" && item.snippet
+      ? { snippet: item.snippet }
+      : {}),
+  }));
 }
 
 /**
