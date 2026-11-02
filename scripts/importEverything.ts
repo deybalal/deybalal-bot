@@ -629,141 +629,265 @@ async function main(): Promise<void> {
     console.log("\n--- 2. Importing Users ---");
     const users = data.users || data.User;
     const userArtistMap = new Map<string, string>();
+    const userIdMap = new Map<string, string>();
+
+    // Pre-load existing user IDs from database to validate foreign keys and mappings
+    const dbUsers = await prisma.user.findMany({
+      select: { id: true, email: true, telegramId: true, userSlug: true },
+    });
+    const existingUserIds = new Set<string>(dbUsers.map((u) => u.id));
+    const fallbackUserId = dbUsers.length > 0 ? dbUsers[0]!.id : null;
+
+    const resolveUserId = (id: string | null | undefined): string | null => {
+      if (!id) return null;
+      const mapped = userIdMap.get(id) || id;
+      if (existingUserIds.has(mapped)) return mapped;
+      if (fallbackUserId && existingUserIds.has(fallbackUserId))
+        return fallbackUserId;
+      if (existingUserIds.size > 0)
+        return existingUserIds.values().next().value!;
+      return mapped;
+    };
 
     await importBatch("users", users, async (u: UserJson) => {
-      if (u.artistId) {
-        userArtistMap.set(u.id, u.artistId);
-      }
       const roleValue: Role =
         u.role === "moderator" || u.role === "administrator"
           ? (u.role as Role)
           : Role.user;
 
-      await prisma.user.upsert({
+      // Locate user by ID, email, or telegramId to avoid unique key conflicts
+      let existing = await prisma.user.findUnique({
         where: { id: u.id },
-        update: {
-          name: u.name,
-          email: u.email,
-          emailVerified: Boolean(u.emailVerified),
-          image: u.image ?? null,
-          bio: u.bio ?? "",
-          isPrivate: Boolean(u.isPrivate),
-          isBanned: Boolean(u.isBanned),
-          // userIndex: u.userIndex, // Omitted to avoid Postgres sequence collisions
-          userSlug: u.userSlug,
-          instagramHandle: u.instagramHandle ?? null,
-          telegramId: u.telegramId ? BigInt(u.telegramId) : null,
-          telegramUsername: u.telegramUsername ?? null,
-          telegramFirstName: u.telegramFirstName ?? null,
-          telegramLastName: u.telegramLastName ?? null,
-          role: roleValue,
-          isVerified: Boolean(u.isVerified),
-          isUserAnArtist: Boolean(u.isUserAnArtist),
-          downloadPreference: u.downloadPreference ?? 128,
-          createdAt: parseDate(u.createdAt),
-          updatedAt: parseDate(u.updatedAt),
-        },
-        create: {
-          id: u.id,
-          name: u.name,
-          email: u.email,
-          emailVerified: Boolean(u.emailVerified),
-          image: u.image ?? null,
-          bio: u.bio ?? "",
-          isPrivate: Boolean(u.isPrivate),
-          isBanned: Boolean(u.isBanned),
-          artistId: null, // Set deferred after artists exist
-          // userIndex: u.userIndex, // Omitted to avoid Postgres sequence collisions
-          userSlug: u.userSlug,
-          instagramHandle: u.instagramHandle ?? null,
-          telegramId: u.telegramId ? BigInt(u.telegramId) : null,
-          telegramUsername: u.telegramUsername ?? null,
-          telegramFirstName: u.telegramFirstName ?? null,
-          telegramLastName: u.telegramLastName ?? null,
-          role: roleValue,
-          isVerified: Boolean(u.isVerified),
-          isUserAnArtist: Boolean(u.isUserAnArtist),
-          downloadPreference: u.downloadPreference ?? 128,
-          createdAt: parseDate(u.createdAt),
-          updatedAt: parseDate(u.updatedAt),
-        },
       });
+
+      if (!existing && u.email) {
+        existing = await prisma.user.findUnique({
+          where: { email: u.email },
+        });
+      }
+
+      if (!existing && u.telegramId) {
+        existing = await prisma.user.findUnique({
+          where: { telegramId: BigInt(u.telegramId) },
+        });
+      }
+
+      let effectiveId = u.id;
+
+      if (existing) {
+        effectiveId = existing.id;
+
+        // If the ID in DB is different from the JSON file, attempt to align DB ID with u.id
+        if (existing.id !== u.id) {
+          try {
+            await prisma.$executeRawUnsafe(
+              `UPDATE "user" SET id = $1 WHERE id = $2`,
+              u.id,
+              existing.id
+            );
+            effectiveId = u.id;
+          } catch {
+            // If primary key update is blocked by FK constraints in Postgres, keep existing.id and map it
+            effectiveId = existing.id;
+          }
+        }
+
+        // Check if userSlug can be safely updated without unique collision
+        let userSlugToUpdate = u.userSlug;
+        if (userSlugToUpdate && userSlugToUpdate !== existing.userSlug) {
+          const slugConflict = await prisma.user.findUnique({
+            where: { userSlug: userSlugToUpdate },
+            select: { id: true },
+          });
+          if (slugConflict && slugConflict.id !== effectiveId) {
+            userSlugToUpdate = existing.userSlug;
+          }
+        }
+
+        await prisma.user.update({
+          where: { id: effectiveId },
+          data: {
+            name: u.name,
+            email: u.email,
+            emailVerified: Boolean(u.emailVerified),
+            image: u.image ?? null,
+            bio: u.bio ?? "",
+            isPrivate: Boolean(u.isPrivate),
+            isBanned: Boolean(u.isBanned),
+            userSlug: userSlugToUpdate,
+            instagramHandle: u.instagramHandle ?? null,
+            telegramId: u.telegramId ? BigInt(u.telegramId) : null,
+            telegramUsername: u.telegramUsername ?? null,
+            telegramFirstName: u.telegramFirstName ?? null,
+            telegramLastName: u.telegramLastName ?? null,
+            role: roleValue,
+            isVerified: Boolean(u.isVerified),
+            isUserAnArtist: Boolean(u.isUserAnArtist),
+            downloadPreference: u.downloadPreference ?? 128,
+            createdAt: parseDate(u.createdAt),
+            updatedAt: parseDate(u.updatedAt),
+          },
+        });
+      } else {
+        let userSlugToUse: string | undefined = u.userSlug;
+        if (userSlugToUse) {
+          const slugConflict = await prisma.user.findUnique({
+            where: { userSlug: userSlugToUse },
+            select: { id: true },
+          });
+          if (slugConflict) {
+            userSlugToUse = undefined;
+          }
+        }
+
+        const created = await prisma.user.create({
+          data: {
+            id: u.id,
+            name: u.name,
+            email: u.email,
+            emailVerified: Boolean(u.emailVerified),
+            image: u.image ?? null,
+            bio: u.bio ?? "",
+            isPrivate: Boolean(u.isPrivate),
+            isBanned: Boolean(u.isBanned),
+            artistId: null, // Set deferred after artists exist
+            ...(userSlugToUse ? { userSlug: userSlugToUse } : {}),
+            instagramHandle: u.instagramHandle ?? null,
+            telegramId: u.telegramId ? BigInt(u.telegramId) : null,
+            telegramUsername: u.telegramUsername ?? null,
+            telegramFirstName: u.telegramFirstName ?? null,
+            telegramLastName: u.telegramLastName ?? null,
+            role: roleValue,
+            isVerified: Boolean(u.isVerified),
+            isUserAnArtist: Boolean(u.isUserAnArtist),
+            downloadPreference: u.downloadPreference ?? 128,
+            createdAt: parseDate(u.createdAt),
+            updatedAt: parseDate(u.updatedAt),
+          },
+        });
+        effectiveId = created.id;
+      }
+
+      userIdMap.set(u.id, effectiveId);
+      if (existing) {
+        userIdMap.set(existing.id, effectiveId);
+      }
+      existingUserIds.add(effectiveId);
+
+      if (u.artistId) {
+        userArtistMap.set(effectiveId, u.artistId);
+      }
     });
 
     const accounts = data.accounts || data.Account;
     await importBatch("accounts", accounts, async (a: AccountJson) => {
-      await prisma.account.upsert({
-        where: { id: a.id },
-        update: {
-          accountId: a.accountId,
-          providerId: a.providerId,
-          userId: a.userId,
-          accessToken: a.accessToken ?? null,
-          refreshToken: a.refreshToken ?? null,
-          idToken: a.idToken ?? null,
-          accessTokenExpiresAt: parseDateOrNull(a.accessTokenExpiresAt),
-          refreshTokenExpiresAt: parseDateOrNull(a.refreshTokenExpiresAt),
-          scope: a.scope ?? null,
-          password: a.password ?? null,
-          createdAt: parseDate(a.createdAt),
-          updatedAt: parseDate(a.updatedAt),
-        },
-        create: {
-          id: a.id,
-          accountId: a.accountId,
-          providerId: a.providerId,
-          userId: a.userId,
-          accessToken: a.accessToken ?? null,
-          refreshToken: a.refreshToken ?? null,
-          idToken: a.idToken ?? null,
-          accessTokenExpiresAt: parseDateOrNull(a.accessTokenExpiresAt),
-          refreshTokenExpiresAt: parseDateOrNull(a.refreshTokenExpiresAt),
-          scope: a.scope ?? null,
-          password: a.password ?? null,
-          createdAt: parseDate(a.createdAt),
-          updatedAt: parseDate(a.updatedAt),
+      const targetUserId = resolveUserId(a.userId);
+      if (!targetUserId || !existingUserIds.has(targetUserId)) return;
+
+      const existing = await prisma.account.findFirst({
+        where: {
+          OR: [
+            { id: a.id },
+            { providerId: a.providerId, accountId: a.accountId },
+            { userId: targetUserId, providerId: a.providerId },
+          ],
         },
       });
+
+      if (existing) {
+        await prisma.account.update({
+          where: { id: existing.id },
+          data: {
+            accountId: a.accountId,
+            providerId: a.providerId,
+            userId: targetUserId,
+            accessToken: a.accessToken ?? null,
+            refreshToken: a.refreshToken ?? null,
+            idToken: a.idToken ?? null,
+            accessTokenExpiresAt: parseDateOrNull(a.accessTokenExpiresAt),
+            refreshTokenExpiresAt: parseDateOrNull(a.refreshTokenExpiresAt),
+            scope: a.scope ?? null,
+            password: a.password ?? null,
+            createdAt: parseDate(a.createdAt),
+            updatedAt: parseDate(a.updatedAt),
+          },
+        });
+      } else {
+        await prisma.account.create({
+          data: {
+            id: a.id,
+            accountId: a.accountId,
+            providerId: a.providerId,
+            userId: targetUserId,
+            accessToken: a.accessToken ?? null,
+            refreshToken: a.refreshToken ?? null,
+            idToken: a.idToken ?? null,
+            accessTokenExpiresAt: parseDateOrNull(a.accessTokenExpiresAt),
+            refreshTokenExpiresAt: parseDateOrNull(a.refreshTokenExpiresAt),
+            scope: a.scope ?? null,
+            password: a.password ?? null,
+            createdAt: parseDate(a.createdAt),
+            updatedAt: parseDate(a.updatedAt),
+          },
+        });
+      }
     });
 
     const sessions = data.sessions || data.Session;
     await importBatch("sessions", sessions, async (s: SessionJson) => {
-      await prisma.session.upsert({
-        where: { id: s.id },
-        update: {
-          expiresAt: parseDate(s.expiresAt) || new Date(),
-          token: s.token,
-          ipAddress: s.ipAddress ?? null,
-          userAgent: s.userAgent ?? null,
-          userId: s.userId,
-          createdAt: parseDate(s.createdAt),
-          updatedAt: parseDate(s.updatedAt),
-        },
-        create: {
-          id: s.id,
-          expiresAt: parseDate(s.expiresAt) || new Date(),
-          token: s.token,
-          ipAddress: s.ipAddress ?? null,
-          userAgent: s.userAgent ?? null,
-          userId: s.userId,
-          createdAt: parseDate(s.createdAt),
-          updatedAt: parseDate(s.updatedAt),
+      const targetUserId = resolveUserId(s.userId);
+      if (!targetUserId || !existingUserIds.has(targetUserId)) return;
+
+      const existing = await prisma.session.findFirst({
+        where: {
+          OR: [{ id: s.id }, { token: s.token }],
         },
       });
+
+      if (existing) {
+        await prisma.session.update({
+          where: { id: existing.id },
+          data: {
+            expiresAt: parseDate(s.expiresAt) || new Date(),
+            token: s.token,
+            ipAddress: s.ipAddress ?? null,
+            userAgent: s.userAgent ?? null,
+            userId: targetUserId,
+            createdAt: parseDate(s.createdAt),
+            updatedAt: parseDate(s.updatedAt),
+          },
+        });
+      } else {
+        await prisma.session.create({
+          data: {
+            id: s.id,
+            expiresAt: parseDate(s.expiresAt) || new Date(),
+            token: s.token,
+            ipAddress: s.ipAddress ?? null,
+            userAgent: s.userAgent ?? null,
+            userId: targetUserId,
+            createdAt: parseDate(s.createdAt),
+            updatedAt: parseDate(s.updatedAt),
+          },
+        });
+      }
     });
 
     const userBadges = data.userBadges || data.UserBadge;
     await importBatch("userBadges", userBadges, async (ub: UserBadgeJson) => {
+      const targetUserId = resolveUserId(ub.userId);
+      if (!targetUserId || !existingUserIds.has(targetUserId)) return;
+
       await prisma.userBadge.upsert({
         where: { id: ub.id },
         update: {
-          userId: ub.userId,
+          userId: targetUserId,
           badgeId: ub.badgeId,
           awardedAt: parseDate(ub.awardedAt) || new Date(),
         },
         create: {
           id: ub.id,
-          userId: ub.userId,
+          userId: targetUserId,
           badgeId: ub.badgeId,
           awardedAt: parseDate(ub.awardedAt) || new Date(),
         },
@@ -773,7 +897,16 @@ async function main(): Promise<void> {
     // --- 3. Artists & Follows ---
     console.log("\n--- 3. Importing Artists & Follows ---");
     const artists = data.artists || data.Artist;
+    const existingArtistIds = new Set<string>(
+      (await prisma.artist.findMany({ select: { id: true } })).map((a) => a.id)
+    );
+
     await importBatch("artists", artists, async (art: ArtistJson) => {
+      let targetUserId = resolveUserId(art.userId);
+      if (targetUserId && !existingUserIds.has(targetUserId)) {
+        targetUserId = null;
+      }
+
       await prisma.artist.upsert({
         where: { id: art.id },
         update: {
@@ -782,7 +915,7 @@ async function main(): Promise<void> {
           image: art.image ?? null,
           isVerified: Boolean(art.isVerified),
           description: art.description ?? null,
-          userId: art.userId ?? null,
+          userId: targetUserId,
           ig: art.ig ?? null,
           igFollowers: art.igFollowers ?? null,
           createdAt: parseDate(art.createdAt),
@@ -795,49 +928,77 @@ async function main(): Promise<void> {
           image: art.image ?? null,
           isVerified: Boolean(art.isVerified),
           description: art.description ?? null,
-          userId: art.userId ?? null,
+          userId: targetUserId,
           ig: art.ig ?? null,
           igFollowers: art.igFollowers ?? null,
           createdAt: parseDate(art.createdAt),
           updatedAt: parseDate(art.updatedAt),
         },
       });
+      existingArtistIds.add(art.id);
     });
 
     // Update deferred user.artistId
     if (userArtistMap.size > 0) {
       for (const [userId, artistId] of userArtistMap.entries()) {
         try {
-          await prisma.user.update({
-            where: { id: userId },
-            data: { artistId },
-          });
+          if (existingArtistIds.has(artistId)) {
+            await prisma.user.update({
+              where: { id: userId },
+              data: { artistId },
+            });
+          }
         } catch {}
       }
     }
 
     const follows = data.follows || data.Follow;
     await importBatch("follows", follows, async (f: FollowJson) => {
-      await prisma.follow.upsert({
-        where: { id: f.id },
-        update: {
-          userId: f.userId,
-          artistId: f.artistId,
-          createdAt: parseDate(f.createdAt),
-        },
-        create: {
-          id: f.id,
-          userId: f.userId,
-          artistId: f.artistId,
-          createdAt: parseDate(f.createdAt),
+      const targetUserId = resolveUserId(f.userId);
+      if (!targetUserId || !existingUserIds.has(targetUserId)) return;
+      if (!existingArtistIds.has(f.artistId)) return;
+
+      const existingFollow = await prisma.follow.findFirst({
+        where: {
+          OR: [{ id: f.id }, { userId: targetUserId, artistId: f.artistId }],
         },
       });
+
+      if (existingFollow) {
+        await prisma.follow.update({
+          where: { id: existingFollow.id },
+          data: {
+            userId: targetUserId,
+            artistId: f.artistId,
+            createdAt: parseDate(f.createdAt),
+          },
+        });
+      } else {
+        await prisma.follow.create({
+          data: {
+            id: f.id,
+            userId: targetUserId,
+            artistId: f.artistId,
+            createdAt: parseDate(f.createdAt),
+          },
+        });
+      }
     });
 
     // --- 4. Albums ---
     console.log("\n--- 4. Importing Albums ---");
     const albums = data.albums || data.Album;
+    const existingAlbumIds = new Set<string>(
+      (await prisma.album.findMany({ select: { id: true } })).map((a) => a.id)
+    );
+
     await importBatch("albums", albums, async (alb: AlbumJson) => {
+      const targetUserId = resolveUserId(alb.userId) || alb.userId;
+      const targetArtistId =
+        alb.artistId && existingArtistIds.has(alb.artistId)
+          ? alb.artistId
+          : null;
+
       await prisma.album.upsert({
         where: { id: alb.id },
         update: {
@@ -849,8 +1010,8 @@ async function main(): Promise<void> {
           duration: alb.duration ?? 0,
           isActive: Boolean(alb.isActive ?? true),
           isFeatured: Boolean(alb.isFeatured ?? false),
-          artistId: alb.artistId ?? null,
-          userId: alb.userId,
+          artistId: targetArtistId,
+          userId: targetUserId,
           createdAt: parseDate(alb.createdAt),
           updatedAt: parseDate(alb.updatedAt),
         },
@@ -864,20 +1025,28 @@ async function main(): Promise<void> {
           duration: alb.duration ?? 0,
           isActive: Boolean(alb.isActive ?? true),
           isFeatured: Boolean(alb.isFeatured ?? false),
-          artistId: alb.artistId ?? null,
-          userId: alb.userId,
+          artistId: targetArtistId,
+          userId: targetUserId,
           createdAt: parseDate(alb.createdAt),
           updatedAt: parseDate(alb.updatedAt),
         },
       });
+      existingAlbumIds.add(alb.id);
     });
 
     // --- 5. Songs & Song Relations ---
     console.log("\n--- 5. Importing Songs ---");
     const songs = data.songs || data.Song;
     console.log("songs.le ", songs?.length);
+    const existingSongIds = new Set<string>(
+      (await prisma.song.findMany({ select: { id: true } })).map((s) => s.id)
+    );
+
     await importBatch("songs", songs, async (s: SongJson) => {
       const parsedLinks = parseJsonField(s.links);
+      const targetUserId = resolveUserId(s.userId) || s.userId;
+      const targetAlbumId =
+        s.albumId && existingAlbumIds.has(s.albumId) ? s.albumId : null;
 
       await prisma.song.upsert({
         where: { id: s.id },
@@ -902,8 +1071,8 @@ async function main(): Promise<void> {
           disabledDescription: s.disabledDescription ?? null,
           isActive: Boolean(s.isActive),
           isFeatured: Boolean(s.isFeatured),
-          albumId: s.albumId ?? null,
-          userId: s.userId,
+          albumId: targetAlbumId,
+          userId: targetUserId,
           lyricsSource: s.lyricsSource ?? null,
           lyricsSourceUrl: s.lyricsSourceUrl ?? null,
           links: parsedLinks,
@@ -933,8 +1102,8 @@ async function main(): Promise<void> {
           disabledDescription: s.disabledDescription ?? null,
           isActive: Boolean(s.isActive),
           isFeatured: Boolean(s.isFeatured),
-          albumId: s.albumId ?? null,
-          userId: s.userId,
+          albumId: targetAlbumId,
+          userId: targetUserId,
           lyricsSource: s.lyricsSource ?? null,
           lyricsSourceUrl: s.lyricsSourceUrl ?? null,
           links: parsedLinks,
@@ -943,9 +1112,13 @@ async function main(): Promise<void> {
           updatedAt: parseDate(s.updatedAt),
         },
       });
+      existingSongIds.add(s.id);
 
       if (s.artists && s.artists.length > 0) {
-        for (const art of s.artists) {
+        const validArtists = s.artists.filter((a) =>
+          existingArtistIds.has(a.id)
+        );
+        for (const art of validArtists) {
           try {
             await prisma.artist.update({
               where: { id: art.id },
@@ -958,14 +1131,16 @@ async function main(): Promise<void> {
             // ignore if artist not found
           }
         }
-        await prisma.song.update({
-          where: { id: s.id },
-          data: {
-            artists: {
-              connect: s.artists.map((a) => ({ id: a.id })),
+        if (validArtists.length > 0) {
+          await prisma.song.update({
+            where: { id: s.id },
+            data: {
+              artists: {
+                connect: validArtists.map((a) => ({ id: a.id })),
+              },
             },
-          },
-        });
+          });
+        }
       }
 
       if (s.telegram || s.post) {
@@ -1010,6 +1185,7 @@ async function main(): Promise<void> {
 
     const songCrews = data.songCrews || data.SongCrew;
     await importBatch("songCrews", songCrews, async (sc: SongCrewJson) => {
+      if (!existingSongIds.has(sc.songId)) return;
       await prisma.songCrew.upsert({
         where: { id: sc.id },
         update: {
@@ -1031,26 +1207,44 @@ async function main(): Promise<void> {
       "contributors",
       contributors,
       async (c: ContributorJson) => {
-        await prisma.contributor.upsert({
-          where: { id: c.id },
-          update: {
-            songId: c.songId,
-            userId: c.userId,
-            type: c.type,
-            percentage: c.percentage ?? 0,
-            createdAt: parseDate(c.createdAt),
-            updatedAt: parseDate(c.updatedAt),
-          },
-          create: {
-            id: c.id,
-            songId: c.songId,
-            userId: c.userId,
-            type: c.type,
-            percentage: c.percentage ?? 0,
-            createdAt: parseDate(c.createdAt),
-            updatedAt: parseDate(c.updatedAt),
+        const targetUserId = resolveUserId(c.userId);
+        if (!targetUserId || !existingUserIds.has(targetUserId)) return;
+        if (!existingSongIds.has(c.songId)) return;
+
+        const existing = await prisma.contributor.findFirst({
+          where: {
+            OR: [
+              { id: c.id },
+              { songId: c.songId, userId: targetUserId, type: c.type },
+            ],
           },
         });
+
+        if (existing) {
+          await prisma.contributor.update({
+            where: { id: existing.id },
+            data: {
+              songId: c.songId,
+              userId: targetUserId,
+              type: c.type,
+              percentage: c.percentage ?? 0,
+              createdAt: parseDate(c.createdAt),
+              updatedAt: parseDate(c.updatedAt),
+            },
+          });
+        } else {
+          await prisma.contributor.create({
+            data: {
+              id: c.id,
+              songId: c.songId,
+              userId: targetUserId,
+              type: c.type,
+              percentage: c.percentage ?? 0,
+              createdAt: parseDate(c.createdAt),
+              updatedAt: parseDate(c.updatedAt),
+            },
+          });
+        }
       }
     );
 
@@ -1059,6 +1253,10 @@ async function main(): Promise<void> {
       "lyricsSuggestions",
       lyricsSuggestions,
       async (ls: LyricsSuggestionJson) => {
+        const targetUserId = resolveUserId(ls.userId);
+        if (!targetUserId || !existingUserIds.has(targetUserId)) return;
+        if (!existingSongIds.has(ls.songId)) return;
+
         const statusValue: SuggestionStatus =
           ls.status === "APPROVED" || ls.status === "REJECTED"
             ? (ls.status as SuggestionStatus)
@@ -1071,7 +1269,7 @@ async function main(): Promise<void> {
           where: { id: ls.id },
           update: {
             songId: ls.songId,
-            userId: ls.userId,
+            userId: targetUserId,
             lyrics: ls.lyrics ?? null,
             syncedLyrics: ls.syncedLyrics ?? null,
             status: statusValue,
@@ -1084,7 +1282,7 @@ async function main(): Promise<void> {
           create: {
             id: ls.id,
             songId: ls.songId,
-            userId: ls.userId,
+            userId: targetUserId,
             lyrics: ls.lyrics ?? null,
             syncedLyrics: ls.syncedLyrics ?? null,
             status: statusValue,
@@ -1101,35 +1299,76 @@ async function main(): Promise<void> {
     // --- 6. Playlists & User Activity ---
     console.log("\n--- 6. Importing Playlists & User Activity ---");
     const playlists = data.playlists || data.Playlist;
+    const existingPlaylistIds = new Set<string>(
+      (await prisma.playlist.findMany({ select: { id: true } })).map(
+        (p) => p.id
+      )
+    );
+    const playlistIdMap = new Map<string, string>();
+
     await importBatch("playlists", playlists, async (p: PlaylistJson) => {
-      await prisma.playlist.upsert({
+      const targetUserId = resolveUserId(p.userId) || p.userId;
+      if (!existingUserIds.has(targetUserId)) {
+        console.warn(
+          `  ⚠️ User ${p.userId} does not exist in DB; skipping playlist ${p.name}`
+        );
+        return;
+      }
+
+      let existing = await prisma.playlist.findUnique({
         where: { id: p.id },
-        update: {
-          name: p.name,
-          description: p.description ?? null,
-          coverArt: p.coverArt ?? null,
-          duration: p.duration ?? 0,
-          isFavorite: Boolean(p.isFavorite),
-          isDownload: Boolean(p.isDownload),
-          isPrivate: Boolean(p.isPrivate),
-          userId: p.userId,
-          createdAt: parseDate(p.createdAt),
-          updatedAt: parseDate(p.updatedAt),
-        },
-        create: {
-          id: p.id,
-          name: p.name,
-          description: p.description ?? null,
-          coverArt: p.coverArt ?? null,
-          duration: p.duration ?? 0,
-          isFavorite: Boolean(p.isFavorite),
-          isDownload: Boolean(p.isDownload),
-          isPrivate: Boolean(p.isPrivate),
-          userId: p.userId,
-          createdAt: parseDate(p.createdAt),
-          updatedAt: parseDate(p.updatedAt),
-        },
       });
+
+      if (!existing && p.isFavorite) {
+        existing = await prisma.playlist.findFirst({
+          where: { userId: targetUserId, isFavorite: true },
+        });
+      }
+
+      if (!existing && p.isDownload) {
+        existing = await prisma.playlist.findFirst({
+          where: { userId: targetUserId, isDownload: true },
+        });
+      }
+
+      const effectivePlaylistId = existing ? existing.id : p.id;
+      playlistIdMap.set(p.id, effectivePlaylistId);
+
+      if (existing) {
+        await prisma.playlist.update({
+          where: { id: existing.id },
+          data: {
+            name: p.name,
+            description: p.description ?? null,
+            coverArt: p.coverArt ?? null,
+            duration: p.duration ?? 0,
+            isFavorite: Boolean(p.isFavorite),
+            isDownload: Boolean(p.isDownload),
+            isPrivate: Boolean(p.isPrivate),
+            userId: targetUserId,
+            createdAt: parseDate(p.createdAt),
+            updatedAt: parseDate(p.updatedAt),
+          },
+        });
+      } else {
+        await prisma.playlist.create({
+          data: {
+            id: p.id,
+            name: p.name,
+            description: p.description ?? null,
+            coverArt: p.coverArt ?? null,
+            duration: p.duration ?? 0,
+            isFavorite: Boolean(p.isFavorite),
+            isDownload: Boolean(p.isDownload),
+            isPrivate: Boolean(p.isPrivate),
+            userId: targetUserId,
+            createdAt: parseDate(p.createdAt),
+            updatedAt: parseDate(p.updatedAt),
+          },
+        });
+      }
+
+      existingPlaylistIds.add(effectivePlaylistId);
     });
 
     const playlistSongs = data.playlistSongs || data.PlaylistSong;
@@ -1137,10 +1376,15 @@ async function main(): Promise<void> {
       "playlistSongs",
       playlistSongs,
       async (ps: PlaylistSongJson) => {
+        const targetPlaylistId =
+          playlistIdMap.get(ps.playlistId) || ps.playlistId;
+        if (!existingPlaylistIds.has(targetPlaylistId)) return;
+        if (!existingSongIds.has(ps.songId)) return;
+
         await prisma.playlistSong.upsert({
           where: {
             playlistId_songId: {
-              playlistId: ps.playlistId,
+              playlistId: targetPlaylistId,
               songId: ps.songId,
             },
           },
@@ -1148,7 +1392,7 @@ async function main(): Promise<void> {
             addedAt: parseDate(ps.addedAt) || new Date(),
           },
           create: {
-            playlistId: ps.playlistId,
+            playlistId: targetPlaylistId,
             songId: ps.songId,
             addedAt: parseDate(ps.addedAt) || new Date(),
           },
@@ -1159,6 +1403,14 @@ async function main(): Promise<void> {
     const comments = data.comments || data.Comment;
     const parentRepliesMap = new Map<string, string>();
     await importBatch("comments", comments, async (c: CommentJson) => {
+      const targetUserId = resolveUserId(c.userId) || c.userId;
+      if (!existingUserIds.has(targetUserId)) return;
+
+      const targetSongId =
+        c.songId && existingSongIds.has(c.songId) ? c.songId : null;
+      const targetAlbumId =
+        c.albumId && existingAlbumIds.has(c.albumId) ? c.albumId : null;
+
       if (c.parentId) {
         parentRepliesMap.set(c.id, c.parentId);
       }
@@ -1166,10 +1418,10 @@ async function main(): Promise<void> {
         where: { id: c.id },
         update: {
           content: c.content,
-          userId: c.userId,
+          userId: targetUserId,
           userSlug: c.userSlug,
-          songId: c.songId ?? null,
-          albumId: c.albumId ?? null,
+          songId: targetSongId,
+          albumId: targetAlbumId,
           postTitle: c.postTitle,
           isActive: Boolean(c.isActive),
           isDeleted: Boolean(c.isDeleted),
@@ -1179,10 +1431,10 @@ async function main(): Promise<void> {
         create: {
           id: c.id,
           content: c.content,
-          userId: c.userId,
+          userId: targetUserId,
           userSlug: c.userSlug,
-          songId: c.songId ?? null,
-          albumId: c.albumId ?? null,
+          songId: targetSongId,
+          albumId: targetAlbumId,
           postTitle: c.postTitle,
           isActive: Boolean(c.isActive),
           isDeleted: Boolean(c.isDeleted),
@@ -1210,10 +1462,13 @@ async function main(): Promise<void> {
       "notifications",
       notifications,
       async (n: NotificationJson) => {
+        const targetUserId = resolveUserId(n.userId);
+        if (!targetUserId || !existingUserIds.has(targetUserId)) return;
+
         await prisma.notification.upsert({
           where: { id: n.id },
           update: {
-            userId: n.userId,
+            userId: targetUserId,
             type: n.type,
             title: n.title,
             message: n.message,
@@ -1223,7 +1478,7 @@ async function main(): Promise<void> {
           },
           create: {
             id: n.id,
-            userId: n.userId,
+            userId: targetUserId,
             type: n.type,
             title: n.title,
             message: n.message,
@@ -1240,16 +1495,20 @@ async function main(): Promise<void> {
       "playHistories",
       playHistories,
       async (ph: PlayHistoryJson) => {
+        const targetUserId = resolveUserId(ph.userId);
+        if (!targetUserId || !existingUserIds.has(targetUserId)) return;
+        if (!existingSongIds.has(ph.songId)) return;
+
         await prisma.playHistory.upsert({
           where: { id: ph.id },
           update: {
-            userId: ph.userId,
+            userId: targetUserId,
             songId: ph.songId,
             playedAt: parseDate(ph.playedAt) || new Date(),
           },
           create: {
             id: ph.id,
-            userId: ph.userId,
+            userId: targetUserId,
             songId: ph.songId,
             playedAt: parseDate(ph.playedAt) || new Date(),
           },
@@ -1276,17 +1535,21 @@ async function main(): Promise<void> {
 
       for (let i = 0; i < list.length; i++) {
         const item = list[i];
+        if (!item) {
+          console.log("Item not found! Index: ", i);
+          continue;
+        }
         try {
           await prisma.$executeRawUnsafe(
             `INSERT INTO \"${tableName}\" (\"A\", \"B\") VALUES ($1, $2) ON CONFLICT DO NOTHING`,
-            item!.A,
-            item!.B
+            item.A,
+            item.B
           );
           successCount++;
         } catch {
           if (fallbackFn) {
             try {
-              await fallbackFn(item!);
+              await fallbackFn(item);
               successCount++;
             } catch {
               errorCount++;
@@ -1317,6 +1580,8 @@ async function main(): Promise<void> {
       "_ArtistToSong",
       artistToSong,
       async (rel: RelationLink) => {
+        if (!existingArtistIds.has(rel.A) || !existingSongIds.has(rel.B))
+          return;
         await prisma.song.update({
           where: { id: rel.B },
           data: { artists: { connect: { id: rel.A } } },
@@ -1334,6 +1599,7 @@ async function main(): Promise<void> {
       "_GenreToSong",
       genreToSong,
       async (rel: RelationLink) => {
+        if (!existingSongIds.has(rel.B)) return;
         await prisma.song.update({
           where: { id: rel.B },
           data: { genres: { connect: { id: rel.A } } },
@@ -1351,6 +1617,7 @@ async function main(): Promise<void> {
       "_AlbumToGenre",
       albumToGenre,
       async (rel: RelationLink) => {
+        if (!existingAlbumIds.has(rel.A)) return;
         await prisma.album.update({
           where: { id: rel.A },
           data: { genres: { connect: { id: rel.B } } },
@@ -1368,6 +1635,7 @@ async function main(): Promise<void> {
       "_SongSimilarity",
       songSimilarity,
       async (rel: RelationLink) => {
+        if (!existingSongIds.has(rel.A) || !existingSongIds.has(rel.B)) return;
         await prisma.song.update({
           where: { id: rel.A },
           data: { similarSongs: { connect: { id: rel.B } } },

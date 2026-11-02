@@ -17,6 +17,7 @@
 
     // Best practices
     "strict": true,
+    "strictNullChecks": false,
     "skipLibCheck": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": true,

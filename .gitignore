@@ -43,3 +43,7 @@ temp
 scripts/*.json
 above50m.json
 erroredUndone.json
+
+64*.json
+128*.json
+320*.json

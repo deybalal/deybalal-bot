@@ -1,4 +1,4 @@
-import { Bot, GrammyError, webhookCallback } from "grammy";
+import { Bot, GrammyError, InlineKeyboard, webhookCallback } from "grammy";
 import type { InlineQueryResultCachedAudio } from "grammy/types";
 import "dotenv/config";
 import { serve } from "@hono/node-server";
@@ -103,7 +103,6 @@ export function registerCallbacks(bot: Bot) {
 registerCallbacks(bot);
 
 bot.on("inline_query", async (ctx) => {
-  const badFilesIds = new Map<string, InlineQueryResultCachedAudio[]>();
   try {
     const query = ctx.inlineQuery.query.trim();
 
@@ -143,6 +142,19 @@ bot.on("inline_query", async (ctx) => {
         console.log("song.title is empty", result);
       }
 
+      const selectedDownloadPath =
+        result.song?.links?.[preferredQuality as "64" | "128" | "320"]?.url;
+
+      const inline = new InlineKeyboard()
+        .text("⏮ پیش نمایش", `p:${result.song.id}`)
+        .row()
+        .text("🎧 نمایش", `s:${result.song.id}`)
+        .row()
+        .text("⬇ دانلود", `d:${result.song.id}:${preferredQuality}`)
+        .row()
+        .text("🎵 آهنگ بعدی", "random")
+        .row();
+
       const artists = result.song.artists as Artist[];
 
       validResults.push({
@@ -158,15 +170,15 @@ bot.on("inline_query", async (ctx) => {
         } ${result.song.title}\n👤 ${artists
           .map(
             (s: { id: string; name: string }) =>
-              `<a href="https://t.me/deybalalirbot?start=a_${s.id}">${s.name}</a>`
+              `<a href="https://t.me/deybalalirbot?start=a_${s.id}">${s.name}</a>\n\nلینک دانلود:\n${process.env.DOWNLOAD_URL}${selectedDownloadPath}`
           )
           .join(" و ")}`,
         parse_mode: "HTML",
+        reply_markup: inline,
       });
     }
 
     const encoded = Buffer.from(query, "utf8").toString("base64url");
-
     await ctx.answerInlineQuery(validResults, {
       cache_time: 20,
       is_personal: true,

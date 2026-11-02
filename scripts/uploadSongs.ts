@@ -283,7 +283,7 @@ async function exists(
   const tg = song.telegram;
   if (tg) {
     if (type === "photo" && tg.cover_art_file_id) return true;
-    if (type === "voice" && (tg.file_id_ogg || tg.ogg_file_id)) return true;
+    if (type === "voice" && tg.file_id_ogg) return true;
     if (type === "audio") {
       if (quality === "64" && tg.file_id_64) return true;
       if (quality === "128" && tg.file_id_128) return true;
@@ -338,8 +338,6 @@ async function saveTx(
   } else if (type === "voice") {
     fields.file_id_ogg = fileId;
     fields.file_unique_id_ogg = uniqueId;
-    fields.ogg_file_id = fileId;
-    fields.ogg_file_unique_id = uniqueId;
   } else if (type === "audio") {
     if (quality === "64") {
       fields.file_id_64 = fileId;
