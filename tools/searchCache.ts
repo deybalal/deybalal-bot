@@ -9,10 +9,11 @@ import prisma from "../src/db.ts";
 let cache: CachedSong[] = [];
 let isInitialized = false;
 let initPromise: Promise<CachedSong[]> | null = null;
-let lastRefreshTime = 0;
-let refreshTimer: NodeJS.Timeout | null = null;
+let refreshPromise: Promise<void> | null = null;
 
-const REFRESH_INTERVAL_MS = 60 * 1000; // 60 seconds
+let lastRefreshTime = 0;
+
+const REFRESH_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
 
 /**
  * Preprocess a raw database song into an optimized in-memory CachedSong
@@ -138,7 +139,7 @@ async function loadSongsFromDatabase(): Promise<CachedSong[]> {
  * Initializes the in-memory search cache with single-flight concurrency protection
  */
 export async function initializeSearchCache(): Promise<CachedSong[]> {
-  if (isInitialized && cache.length > 0) {
+  if (isInitialized) {
     return cache;
   }
 
@@ -149,10 +150,11 @@ export async function initializeSearchCache(): Promise<CachedSong[]> {
   initPromise = (async () => {
     try {
       const data = await loadSongsFromDatabase();
+
       cache = data;
       isInitialized = true;
       lastRefreshTime = Date.now();
-      startAutoRefresh();
+
       return cache;
     } catch (err) {
       console.error("[SEARCH] Error initializing search cache:", err);
@@ -169,34 +171,51 @@ export async function initializeSearchCache(): Promise<CachedSong[]> {
  * Returns the current search cache, initializing if necessary
  */
 export async function getSearchCache(): Promise<CachedSong[]> {
-  if (!isInitialized || cache.length === 0) {
-    return await initializeSearchCache();
+  if (!isInitialized) {
+    return initializeSearchCache();
   }
+
+  if (Date.now() - lastRefreshTime >= REFRESH_INTERVAL_MS) {
+    await refreshSearchCache();
+  }
+
   return cache;
 }
-
 /**
  * Safely refreshes the search cache in the background.
  * If refresh fails, the previous working cache is retained.
  */
 export async function refreshSearchCache(): Promise<void> {
-  try {
-    const startTime = Date.now();
-    const freshSongs = await loadSongsFromDatabase();
-    if (freshSongs && freshSongs.length > 0) {
+  if (refreshPromise) {
+    return refreshPromise;
+  }
+
+  refreshPromise = (async () => {
+    try {
+      const startTime = Date.now();
+
+      const freshSongs = await loadSongsFromDatabase();
+
+      // Replace cache even if the database currently contains zero active songs.
       cache = freshSongs;
       lastRefreshTime = Date.now();
-      const duration = Date.now() - startTime;
+
       console.log(
-        `[SEARCH] Cache refresh completed in ${duration}ms (${cache.length} songs).`
+        `[SEARCH] Cache refresh completed in ${Date.now() - startTime}ms (${
+          cache.length
+        } songs).`
       );
+    } catch (err) {
+      console.error(
+        "[SEARCH] Cache refresh failed; keeping existing cache.",
+        err
+      );
+    } finally {
+      refreshPromise = null;
     }
-  } catch (err) {
-    console.error(
-      "[SEARCH] Cache background refresh failed; keeping existing cache.",
-      err
-    );
-  }
+  })();
+
+  return refreshPromise;
 }
 
 /**
@@ -205,22 +224,6 @@ export async function refreshSearchCache(): Promise<void> {
 export async function invalidateSearchCache(): Promise<void> {
   console.log("[SEARCH] Manual cache invalidation requested.");
   await refreshSearchCache();
-}
-
-/**
- * Starts automatic background cache refresh timer
- */
-function startAutoRefresh(): void {
-  if (refreshTimer) return;
-  refreshTimer = setInterval(() => {
-    refreshSearchCache().catch((err) => {
-      console.error("[SEARCH] Scheduled cache refresh error:", err);
-    });
-  }, REFRESH_INTERVAL_MS);
-
-  if (refreshTimer.unref) {
-    refreshTimer.unref();
-  }
 }
 
 /**

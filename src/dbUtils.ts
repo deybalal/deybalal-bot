@@ -10,22 +10,8 @@ import type {
 } from "../types/types";
 import * as crypto from "crypto";
 import prisma from "./db.ts";
-import {
-  getSearchCache,
-  initializeSearchCache,
-  refreshSearchCache,
-  invalidateSearchCache,
-  getCacheStats,
-} from "../tools/searchCache.ts";
+import { getSearchCache } from "../tools/searchCache.ts";
 import { rankSongsInMemory } from "../tools/searchEngine.ts";
-
-export {
-  getSearchCache,
-  initializeSearchCache,
-  refreshSearchCache,
-  invalidateSearchCache,
-  getCacheStats,
-};
 
 /**
  * Normalizes a database Song object (with its related Telegram record)
