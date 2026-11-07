@@ -43,17 +43,15 @@ import { sendErrorMessages } from "../tools/sendErrorMessages.ts";
 import fs from "fs";
 import os from "os";
 import path from "path";
-import { identifyAudio, type FingerprintResult } from "./fingerprints.js";
-import { downloadTelegramFile } from "../tools/downloadTelegramFile.js";
-import { escapeHtml } from "../tools/escapeHtml.js";
-import { handleVoiceIdentification } from "../tools/handleVoiceIdentification.js";
-import { registerIdentifyCallback } from "./callbacks/identify.js";
+import { identifyAudio, type FingerprintResult } from "./fingerprints.ts";
+import { handleVoiceIdentification } from "../tools/handleVoiceIdentification.ts";
+import { registerIdentifyCallback } from "./callbacks/identify.ts";
 import { cors } from "hono/cors";
-import { registerStoryVideoCallbacks } from "./callbacks/storyVideo.js";
-import type { Artist } from "../types/types.js";
-import { registerFeaturedCallbacks } from "./callbacks/featured.js";
-import { registerFeaturedCommands } from "./commands/featured.js";
-import prisma from "./db.js";
+import { registerStoryVideoCallbacks } from "./callbacks/storyVideo.ts";
+import type { Artist } from "../types/types.ts";
+import { registerFeaturedCallbacks } from "./callbacks/featured.ts";
+import { registerFeaturedCommands } from "./commands/featured.ts";
+import prisma from "./db.ts";
 
 const app = new Hono();
 

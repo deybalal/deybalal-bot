@@ -1,0 +1,60 @@
+module.exports = {
+  apps: [
+    {
+      name: "dey",
+      script: "src/index.ts",
+      interpreter: "node",
+      cwd: __dirname,
+      instances: 1,
+      exec_mode: "fork",
+      autorestart: true,
+      watch: false,
+      time: true,
+      env: {
+        NODE_ENV: "production",
+      },
+    },
+    {
+      name: "featured",
+      script: "scripts/sendFeaturedSongOfTheDay.ts",
+      interpreter: "node",
+      cwd: __dirname,
+      instances: 1,
+      exec_mode: "fork",
+      autorestart: true,
+      watch: false,
+      time: true,
+      env: {
+        NODE_ENV: "production",
+      },
+    },
+    {
+      name: "post",
+      script: "scripts/postSongs.ts",
+      interpreter: "node",
+      cwd: __dirname,
+      instances: 1,
+      exec_mode: "fork",
+      autorestart: true,
+      watch: false,
+      time: true,
+      env: {
+        NODE_ENV: "production",
+      },
+    },
+    {
+      name: "setfeatured",
+      script: "scripts/setFeaturedSongOfTheDay.ts",
+      interpreter: "node",
+      cwd: __dirname,
+      instances: 1,
+      exec_mode: "fork",
+      autorestart: true,
+      watch: false,
+      time: true,
+      env: {
+        NODE_ENV: "production",
+      },
+    },
+  ],
+};
