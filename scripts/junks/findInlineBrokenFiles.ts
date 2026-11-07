@@ -1,7 +1,7 @@
 import { GrammyError } from "grammy";
-import bot from "../../src";
-import { getTelegramFile } from "../../src/dbUtils";
-import type { Song } from "../../types/types";
+import bot from "../../src/index.ts";
+import { getTelegramFile } from "../../src/dbUtils.ts";
+import type { Song } from "../../types/types.ts";
 import { readFile, writeFile } from "fs/promises";
 
 function sleep(ms: number) {
@@ -66,7 +66,7 @@ export async function findInlineBrokenFiles(allSongs: Song[]) {
     ];
 
     for (const { q, file } of qualities) {
-      if (!file?.fileId) continue;
+      if (!(await file)?.fileId) continue;
 
       if (reportedIndx % 10 === 0) {
         console.log("Reported", reportedIndx, "of", allSongs.length * 3);
@@ -75,7 +75,12 @@ export async function findInlineBrokenFiles(allSongs: Song[]) {
 
       try {
         // NOTE: no title/performer override here on purpose
-        const msg = await sendAudioWithRetry(-1003936127617, file.fileId);
+        const msg = await sendAudioWithRetry(
+          -1003936127617,
+          (
+            await file
+          ).fileId
+        );
         const embeddedTitle = msg.audio?.title;
         const embeddedPerformer = msg.audio?.performer;
 
@@ -86,7 +91,7 @@ export async function findInlineBrokenFiles(allSongs: Song[]) {
           badFiles.push({
             songId: song.id,
             quality: q,
-            fileId: file.fileId,
+            fileId: (await file).fileId,
             dbTitle: song.title,
             singer: song.artistEn,
             embeddedTitle,

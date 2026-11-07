@@ -1,5 +1,5 @@
 import { Bot } from "grammy";
-import { db } from "../db";
+import { db } from "../db.ts";
 
 export function registerUsersCommand(bot: Bot) {
   bot.command("users", async (ctx) => {

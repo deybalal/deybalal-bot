@@ -8,11 +8,11 @@ import {
   getSongsByArtistId,
   getStats,
   searchSongs,
-} from "../dbUtils";
-import { sendSearchResults } from "../../tools/sendSearchResults";
-import { showSong } from "../../tools/showSong";
-import prisma from "../db";
-import { startCommandKeyboard } from "../callbacks/StartComamndKeyboard";
+} from "../dbUtils.ts";
+import { sendSearchResults } from "../../tools/sendSearchResults.ts";
+import { showSong } from "../../tools/showSong.ts";
+import prisma from "../db.ts";
+import { startCommandKeyboard } from "../callbacks/StartComamndKeyboard.ts";
 
 export function registerStartCommand(bot: Bot) {
   bot.command("start", async (ctx) => {
@@ -207,7 +207,9 @@ export function registerStartCommand(bot: Bot) {
 
     // Format: clip_<songId>_<start>_<end>_<lyricsType> or v_<songId>_<start>_<end>_<lyricsType>
     if (ctx.match?.startsWith("clip_") || ctx.match?.startsWith("v_")) {
-      const { handleStoryVideoStart } = await import("../callbacks/storyVideo");
+      const { handleStoryVideoStart } = await import(
+        "../callbacks/storyVideo.ts"
+      );
       return await handleStoryVideoStart(ctx, ctx.match);
     }
 

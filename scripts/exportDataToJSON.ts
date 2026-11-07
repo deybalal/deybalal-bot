@@ -1,6 +1,6 @@
 import * as fs from "fs/promises";
 import * as path from "path";
-import { prisma } from "../src/db";
+import { prisma } from "../src/db.ts";
 
 declare global {
   interface BigInt {

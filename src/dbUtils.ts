@@ -7,7 +7,7 @@ import type {
   TelegramFile,
   TelegramSongWithFiles,
   TelegramUser,
-} from "../types/types";
+} from "../types/types.ts";
 import * as crypto from "crypto";
 import prisma from "./db.ts";
 import { getSearchCache } from "../tools/searchCache.ts";

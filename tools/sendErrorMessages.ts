@@ -1,5 +1,5 @@
 import type { Bot } from "grammy";
-import { escapeHtml } from "./escapeHtml";
+import { escapeHtml } from "./escapeHtml.ts";
 
 function sanitizePaths(text: string, username: string): string {
   const pathToReplace = `/home/${username}`;

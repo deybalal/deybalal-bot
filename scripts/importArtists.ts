@@ -1,4 +1,4 @@
-import { addArtist } from "../src/dbUtils";
+import { addArtist } from "../src/dbUtils.ts";
 import { readFileSync } from "fs";
 import { join } from "path";
 

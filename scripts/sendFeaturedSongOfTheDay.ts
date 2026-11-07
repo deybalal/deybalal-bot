@@ -1,7 +1,7 @@
 import cron from "node-cron";
 import { Bot, InlineKeyboard } from "grammy";
 import "dotenv/config";
-import prisma from "../src/db";
+import prisma from "../src/db.ts";
 
 const bot = new Bot(process.env.BOT_TOKEN!);
 

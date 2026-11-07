@@ -1,5 +1,5 @@
 import { Bot, InlineKeyboard } from "grammy";
-import { helpText } from "../../tools/helpText";
+import { helpText } from "../../tools/helpText.ts";
 
 export function registerHelpCallback(bot: Bot) {
   bot.callbackQuery("help", async (ctx) => {

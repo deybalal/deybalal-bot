@@ -1,7 +1,11 @@
 import { Bot } from "grammy";
-import { getPreferredQuality, setPreferredQuality, getStats } from "../dbUtils";
+import {
+  getPreferredQuality,
+  setPreferredQuality,
+  getStats,
+} from "../dbUtils.ts";
 import { InlineKeyboard } from "grammy";
-import { startCommandKeyboard } from "./StartComamndKeyboard";
+import { startCommandKeyboard } from "./StartComamndKeyboard.ts";
 
 export function registerMenuCallbacks(bot: Bot) {
   bot.callbackQuery("home", async (ctx) => {

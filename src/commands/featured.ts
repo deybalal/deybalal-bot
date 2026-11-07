@@ -1,5 +1,5 @@
 import { Bot } from "grammy";
-import prisma from "../db";
+import prisma from "../db.ts";
 
 export function registerFeaturedCommands(bot: Bot) {
   bot.command("featured", async (ctx) => {

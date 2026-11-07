@@ -6,9 +6,9 @@ import {
   searchSongs,
   getRandomSong,
   getPreferredQuality,
-} from "../dbUtils";
-import { showSong } from "../../tools/showSong";
-import { hashtagify } from "../../tools/hashtagify";
+} from "../dbUtils.ts";
+import { showSong } from "../../tools/showSong.ts";
+import { hashtagify } from "../../tools/hashtagify.ts";
 
 function highlightBotName(text: string): string {
   return text.normalize("NFKC").replace(/دی\s*بلال/g, () => {

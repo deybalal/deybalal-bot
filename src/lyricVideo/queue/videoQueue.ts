@@ -1,5 +1,5 @@
-import type { VideoJob } from "../../../types/types";
-import { executeRendering } from "../handler";
+import type { VideoJob } from "../../../types/types.ts";
+import { executeRendering } from "../handler.ts";
 
 const queue: VideoJob[] = [];
 let processing = false;

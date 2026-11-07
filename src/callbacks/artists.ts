@@ -3,8 +3,8 @@ import {
   getSongsByArtistId,
   getRandomSongByArtistId,
   getArtistById,
-} from "../dbUtils";
-import { showSong } from "../../tools/showSong";
+} from "../dbUtils.ts";
+import { showSong } from "../../tools/showSong.ts";
 
 export function registerArtistCallbacks(bot: Bot) {
   bot.callbackQuery(/^a:(.+):(\d+)$/, async (ctx) => {

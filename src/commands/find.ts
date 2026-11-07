@@ -1,6 +1,6 @@
 import { Bot } from "grammy";
-import { getSongs } from "../dbUtils";
-import { findInlineBrokenFiles } from "../../scripts/junks/findInlineBrokenFiles";
+import { getSongs } from "../dbUtils.ts";
+import { findInlineBrokenFiles } from "../../scripts/junks/findInlineBrokenFiles.ts";
 
 export function registerFindCommand(bot: Bot) {
   bot.command("find", async (ctx) => {

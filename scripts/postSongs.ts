@@ -1,7 +1,7 @@
 import cron, { type ScheduledTask } from "node-cron";
 import { Bot } from "grammy";
-import { sendSongToChannel } from "./sendSongToChannel";
-import { getUnpostedSongs, updateSongWithPostDetails } from "../src/dbUtils";
+import { sendSongToChannel } from "./sendSongToChannel.ts";
+import { getUnpostedSongs, updateSongWithPostDetails } from "../src/dbUtils.ts";
 import "dotenv/config";
 
 const bot = new Bot(process.env.BOT_TOKEN!);

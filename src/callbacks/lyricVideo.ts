@@ -1,8 +1,8 @@
 import { Bot } from "grammy";
-import { getState, setState } from "../lyricVideo/state";
-import { handleDoneButton } from "../lyricVideo/handler";
-import { enqueue, getQueueLength } from "../lyricVideo/queue/videoQueue";
-import { getSongById } from "../dbUtils";
+import { getState, setState } from "../lyricVideo/state.ts";
+import { handleDoneButton } from "../lyricVideo/handler.ts";
+import { enqueue, getQueueLength } from "../lyricVideo/queue/videoQueue.ts";
+import { getSongById } from "../dbUtils.ts";
 
 export function registerLyricVideoCallbacks(bot: Bot) {
   bot.callbackQuery(/^lv_res_(big|small)$/, async (ctx) => {
@@ -59,7 +59,7 @@ export function registerLyricVideoCallbacks(bot: Bot) {
       await ctx.answerCallbackQuery("❌ خطا");
       return;
     }
-    const { startLyricVideo } = await import("../lyricVideo/handler");
+    const { startLyricVideo } = await import("../lyricVideo/handler.ts");
     await startLyricVideo(ctx, songId);
   });
 

@@ -1,5 +1,5 @@
 import { InlineKeyboard } from "grammy";
-import prisma from "../db";
+import prisma from "../db.ts";
 
 export const startCommandKeyboard = async (userId: number) => {
   const user = await prisma.user.findUnique({

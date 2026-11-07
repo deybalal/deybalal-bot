@@ -1,7 +1,6 @@
-import { Database } from "bun:sqlite";
+import Database from "better-sqlite3";
 import path from "path";
 import fs from "fs";
-import os from "os";
 import { execFile } from "child_process";
 import { promisify } from "util";
 
@@ -46,7 +45,7 @@ export interface FingerprintResult {
   candidates: FingerprintCandidate[];
 }
 
-export function getFingerprintsDb(customPath?: string) {
+export function getFingerprintsDb(customPath?: string): Database.Database {
   const dbPath =
     customPath || process.env.FINGERPRINTS_DB_PATH || DEFAULT_DB_PATH;
 
@@ -58,12 +57,17 @@ export function getFingerprintsDb(customPath?: string) {
 
   const db = new Database(dbPath);
 
-  db.exec("PRAGMA journal_mode = WAL");
-  db.exec("PRAGMA synchronous = NORMAL");
-  db.exec("PRAGMA cache_size = -64000");
-  db.exec("PRAGMA temp_store = MEMORY");
-  db.exec("PRAGMA wal_autocheckpoint = 1000");
+  // SQLite performance settings
+  db.pragma("journal_mode = WAL");
+  db.pragma("synchronous = NORMAL");
+  db.pragma("cache_size = -64000");
+  db.pragma("temp_store = MEMORY");
+  db.pragma("wal_autocheckpoint = 1000");
 
+  // Enable foreign-key enforcement
+  db.pragma("foreign_keys = ON");
+
+  // Initialize database schema
   db.exec(`
     CREATE TABLE IF NOT EXISTS songs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,

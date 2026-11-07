@@ -1,6 +1,6 @@
 import { Bot, InlineKeyboard } from "grammy";
-import type { TelegramSongWithFiles } from "../../types/types";
-import { getRandomSongWithLyrics } from "../dbUtils";
+import type { TelegramSongWithFiles } from "../../types/types.ts";
+import { getRandomSongWithLyrics } from "../dbUtils.ts";
 
 function highlightBotName(text: string): string {
   return text.normalize("NFKC").replace(/دی\s*بلال/g, () => {

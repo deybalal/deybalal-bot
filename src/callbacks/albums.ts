@@ -1,5 +1,5 @@
 import { Bot } from "grammy";
-import { getAllAlbums, getSongsByAlbumId } from "../dbUtils";
+import { getAllAlbums, getSongsByAlbumId } from "../dbUtils.ts";
 
 export function registerAlbumCallbacks(bot: Bot) {
   bot.callbackQuery(/^albums:(\d+)$/, async (ctx) => {

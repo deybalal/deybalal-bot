@@ -9,36 +9,36 @@ import {
   searchSongs,
   getPreferredQuality,
   saveTelegramFile,
-} from "./dbUtils";
-import { sendSearchResults } from "../tools/sendSearchResults";
-import { handlePhoto, handleRangeInput } from "./lyricVideo/handler";
-import { registerStartCommand } from "./commands/start";
-import { registerFindCommand } from "./commands/find";
-import { registerSearchCommand } from "./commands/search";
-import { registerUsersCommand } from "./commands/users";
-import { registerCancelCommand } from "./commands/cancel";
-import { registerTopCommand } from "./commands/top";
-import { registerMostplayedCommand } from "./commands/mostplayed";
-import { registerAlbumsCommand } from "./commands/albums";
-import { registerLyricVideoCallbacks } from "./callbacks/lyricVideo";
-import { registerSongCallbacks } from "./callbacks/songs";
-import { registerFavoriteCallbacks } from "./callbacks/favorites";
-import { registerArtistCallbacks } from "./callbacks/artists";
-import { registerAlbumCallbacks } from "./callbacks/albums";
-import { registerMenuCallbacks } from "./callbacks/menu";
-import { registerPlaylistCallbacks } from "./callbacks/playlists";
-import { registerUtilityCallbacks } from "./callbacks/utility";
-import { registerUpdateCommand } from "./commands/update";
-import { exec } from "node:child_process";
+} from "./dbUtils.ts";
+import { sendSearchResults } from "../tools/sendSearchResults.ts";
+import { handlePhoto, handleRangeInput } from "./lyricVideo/handler.ts";
+import { registerStartCommand } from "./commands/start.ts";
+import { registerFindCommand } from "./commands/find.ts";
+import { registerSearchCommand } from "./commands/search.ts";
+import { registerUsersCommand } from "./commands/users.ts";
+import { registerCancelCommand } from "./commands/cancel.ts";
+import { registerTopCommand } from "./commands/top.ts";
+import { registerMostplayedCommand } from "./commands/mostplayed.ts";
+import { registerAlbumsCommand } from "./commands/albums.ts";
+import { registerLyricVideoCallbacks } from "./callbacks/lyricVideo.ts";
+import { registerSongCallbacks } from "./callbacks/songs.ts";
+import { registerFavoriteCallbacks } from "./callbacks/favorites.ts";
+import { registerArtistCallbacks } from "./callbacks/artists.ts";
+import { registerAlbumCallbacks } from "./callbacks/albums.ts";
+import { registerMenuCallbacks } from "./callbacks/menu.ts";
+import { registerPlaylistCallbacks } from "./callbacks/playlists.ts";
+import { registerUtilityCallbacks } from "./callbacks/utility.ts";
+import { registerUpdateCommand } from "./commands/update.ts";
+import { exec, execFile } from "child_process";
 import { promisify } from "node:util";
-import { verifyGithubSignature } from "../tools/verifyGithubSignature";
-import { registerBackupCommand } from "./commands/backup";
-import { registerHelpCommand } from "./commands/help";
-import { registerHelpCallback } from "./callbacks/help";
+import { verifyGithubSignature } from "../tools/verifyGithubSignature.ts";
+import { registerBackupCommand } from "./commands/backup.ts";
+import { registerHelpCommand } from "./commands/help.ts";
+import { registerHelpCallback } from "./callbacks/help.ts";
 import { logger } from "hono/logger";
-import { registerRandomLyricCallbacks } from "./callbacks/randomLyric";
+import { registerRandomLyricCallbacks } from "./callbacks/randomLyric.ts";
 import { timeout } from "hono/timeout";
-import { sendErrorMessages } from "../tools/sendErrorMessages";
+import { sendErrorMessages } from "../tools/sendErrorMessages.ts";
 
 import fs from "fs";
 import os from "os";
@@ -477,26 +477,38 @@ app.post("/deploy", async (c) => {
     return c.text("Unauthorized", 401);
   }
 
-  const execAsync = promisify(exec);
+  const execFileAsync = promisify(execFile);
 
-  const msg = await bot.api.sendMessage(
-    Number(process.env.ADMIN_ID),
-    "🔄 Updating bot..."
-  );
+  const adminId = Number(process.env.ADMIN_ID);
+
+  const msg = await bot.api.sendMessage(adminId, "🔄 Updating bot...");
 
   try {
     const cwd = process.cwd();
 
-    await execAsync("git fetch origin", { cwd });
-    await execAsync("git reset --hard origin/main", { cwd });
+    const run = async (command: string, args: string[]) => {
+      return execFileAsync(command, args, {
+        cwd,
+        maxBuffer: 20 * 1024 * 1024,
+        timeout: 120_000,
+      });
+    };
 
-    // Install new dependencies if package.json changed
-    await execAsync("bun install --production", { cwd });
-    await execAsync("bunx prisma generate", { cwd });
-    await execAsync("bunx prisma db push", { cwd });
+    // Update source code
+    await run("git", ["fetch", "origin"]);
+    await run("git", ["reset", "--hard", "origin/main"]);
+
+    // Install production dependencies
+    await run("npm", ["install", "--omit=dev"]);
+
+    // Generate Prisma Client
+    await run("npx", ["prisma", "generate"]);
+
+    // Apply database schema changes
+    await run("npx", ["prisma", "db", "push"]);
 
     await bot.api.editMessageText(
-      Number(process.env.ADMIN_ID),
+      adminId,
       msg.message_id,
       "✅ Bot updated successfully!"
     );
@@ -504,12 +516,20 @@ app.post("/deploy", async (c) => {
     await sleep(500);
 
     // Restart the bot
-    await execAsync("pm2 restart dey", { cwd });
+    await run("pm2", ["restart", "dey"]);
   } catch (err: any) {
+    console.error("Deployment failed:", err);
+
+    const errorOutput =
+      err.stderr?.toString() ||
+      err.stdout?.toString() ||
+      err.message ||
+      "Unknown error";
+
     await bot.api.editMessageText(
-      Number(process.env.ADMIN_ID),
+      adminId,
       msg.message_id,
-      `❌ Update failed.\n\n<pre>${err.stderr || err.message}</pre>`,
+      `❌ Update failed.\n\n<pre>${errorOutput.slice(-3000)}</pre>`,
       {
         parse_mode: "HTML",
       }
@@ -530,7 +550,7 @@ app.post("/bkUp09trxWhy41Not31", async (c) => {
     const execAsync = promisify(exec);
     const cwd = process.cwd();
 
-    const { stdout } = await execAsync("bun run scripts/exportDataToJSON.ts", {
+    const { stdout } = await execAsync("node run scripts/exportEverything.ts", {
       cwd,
     });
 

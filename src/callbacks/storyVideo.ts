@@ -8,14 +8,14 @@ import {
   buildStorySlideshow,
   renderFinalStory,
   generateStoryThumbnail,
-} from "../storyVideo/storyFfmpeg";
+} from "../storyVideo/storyFfmpeg.ts";
 
 import {
   enqueueStory,
   getStoryQueueLength,
   removeFromStoryQueue,
   isStoryQueued,
-} from "../storyVideo/storyQueue";
+} from "../storyVideo/storyQueue.ts";
 import {
   getStoryState,
   setStoryState,
@@ -23,17 +23,17 @@ import {
   isStoryBusy,
   type StoryVideoState,
   type StoryLyricsType,
-} from "../storyVideo/storyState";
+} from "../storyVideo/storyState.ts";
 import {
   createStoryJobDir,
   cleanupStoryJobDir,
   formatMs,
-} from "../storyVideo/storyUtils";
-import { generateStoryASSFile } from "../storyVideo/storyAssGenerator";
-import { generateSimpleASSFile } from "../storyVideo/simpleAssGenerator";
-import { createStoryCardInBot } from "../storyVideo/storyCanvasGenerator";
-import { getSongById } from "../dbUtils";
-import { downloadTelegramFile } from "../../tools/downloadTelegramFile";
+} from "../storyVideo/storyUtils.ts";
+import { generateStoryASSFile } from "../storyVideo/storyAssGenerator.ts";
+import { generateSimpleASSFile } from "../storyVideo/simpleAssGenerator.ts";
+import { createStoryCardInBot } from "../storyVideo/storyCanvasGenerator.ts";
+import { getSongById } from "../dbUtils.ts";
+import { downloadTelegramFile } from "../../tools/downloadTelegramFile.ts";
 
 async function updateStoryProgress(
   bot: Bot,

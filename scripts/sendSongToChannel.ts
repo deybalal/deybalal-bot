@@ -1,6 +1,6 @@
-import type { Artist, TelegramSongWithFiles } from "../types/types";
-import { formatDuration } from "../tools/formatDuration";
-import { hashtagify } from "../tools/hashtagify";
+import type { Artist, TelegramSongWithFiles } from "../types/types.ts";
+import { formatDuration } from "../tools/formatDuration.ts";
+import { hashtagify } from "../tools/hashtagify.ts";
 import type { Bot } from "grammy";
 
 export async function sendSongToChannel(

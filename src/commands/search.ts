@@ -1,6 +1,6 @@
 import { Bot } from "grammy";
-import { ensureUser, searchSongs } from "../dbUtils";
-import { sendSearchResults } from "../../tools/sendSearchResults";
+import { ensureUser, searchSongs } from "../dbUtils.ts";
+import { sendSearchResults } from "../../tools/sendSearchResults.ts";
 
 export function registerSearchCommand(bot: Bot) {
   bot.command("search", async (ctx) => {

@@ -1,5 +1,5 @@
 import { Bot } from "grammy";
-import { getTopPlayedSongs, getMostDownloadedSongs } from "../dbUtils";
+import { getTopPlayedSongs, getMostDownloadedSongs } from "../dbUtils.ts";
 
 export function registerPlaylistCallbacks(bot: Bot) {
   bot.callbackQuery(/^top:(\d+)$/, async (ctx) => {

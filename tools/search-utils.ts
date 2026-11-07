@@ -1,5 +1,5 @@
 import { Prisma } from "@prisma/client";
-import { getStringSimilarity } from "./getStringSimilarity";
+import { getStringSimilarity } from "./getStringSimilarity.ts";
 
 /**
  * Standardize Persian & Arabic text:

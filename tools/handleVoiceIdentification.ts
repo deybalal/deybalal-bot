@@ -1,11 +1,12 @@
 import type { Context } from "grammy";
 import os from "os";
 import path from "path";
-import { identifyAudio } from "../src/fingerprints";
 import fs from "fs";
-import { downloadTelegramFile } from "./downloadTelegramFile";
-import { escapeHtml } from "./escapeHtml";
-import { getSongById } from "../src/dbUtils";
+
+import { getSongById } from "../src/dbUtils.ts";
+import { identifyAudio } from "../src/fingerprints.ts";
+import { downloadTelegramFile } from "./downloadTelegramFile.ts";
+import { escapeHtml } from "./escapeHtml.ts";
 
 export async function handleVoiceIdentification(ctx: Context) {
   const voice = ctx.message?.voice;

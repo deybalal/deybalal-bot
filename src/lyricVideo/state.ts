@@ -1,4 +1,4 @@
-import type { LyricVideoState } from "../../types/types";
+import type { LyricVideoState } from "../../types/types.ts";
 
 const userStates = new Map<number, LyricVideoState>();
 

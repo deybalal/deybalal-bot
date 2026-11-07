@@ -1,7 +1,7 @@
 import { Bot, GrammyError, InputFile } from "grammy";
 import "dotenv/config";
 import path from "path";
-import prisma from "../src/db";
+import prisma from "../src/db.ts";
 
 const bot = new Bot(process.env.BOT_TOKEN!);
 

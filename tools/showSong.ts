@@ -1,8 +1,8 @@
 import { InlineKeyboard, type Context } from "grammy";
-import type { Artist, TelegramSongWithFiles } from "../types/types";
-import { formatDuration } from "./formatDuration";
-import { formatBytes } from "./formatBytes";
-import { incrementSongPlayCount, isFavorite } from "../src/dbUtils";
+import type { Artist, TelegramSongWithFiles } from "../types/types.ts";
+import { formatDuration } from "./formatDuration.ts";
+import { formatBytes } from "./formatBytes.ts";
+import { incrementSongPlayCount, isFavorite } from "../src/dbUtils.ts";
 
 export async function showSong(
   ctx: Context,

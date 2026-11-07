@@ -4,8 +4,8 @@ import {
   addFavorite,
   getFavoriteSongs,
   getSongById,
-} from "../dbUtils";
-import { showSong } from "../../tools/showSong";
+} from "../dbUtils.ts";
+import { showSong } from "../../tools/showSong.ts";
 
 export function registerFavoriteCallbacks(bot: Bot) {
   bot.callbackQuery(/^f:remove:(.+)$/, async (ctx) => {

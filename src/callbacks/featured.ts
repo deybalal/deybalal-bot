@@ -1,6 +1,6 @@
 import { Bot } from "grammy";
-import prisma from "../db";
-import { startCommandKeyboard } from "./StartComamndKeyboard";
+import prisma from "../db.ts";
+import { startCommandKeyboard } from "./StartComamndKeyboard.ts";
 
 export function registerFeaturedCallbacks(bot: Bot) {
   bot.callbackQuery("featured", async (ctx) => {

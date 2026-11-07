@@ -1,5 +1,5 @@
 import { Bot } from "grammy";
-import { ensureUser, getMostDownloadedSongs } from "../dbUtils";
+import { ensureUser, getMostDownloadedSongs } from "../dbUtils.ts";
 
 export function registerMostplayedCommand(bot: Bot) {
   bot.command("mostplayed", async (ctx) => {

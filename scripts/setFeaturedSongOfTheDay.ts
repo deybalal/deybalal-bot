@@ -1,6 +1,6 @@
 import cron from "node-cron";
 import "dotenv/config";
-import prisma from "../src/db";
+import prisma from "../src/db.ts";
 
 async function setFeaturedSong() {
   console.log("Starting setFeaturedSong job...");

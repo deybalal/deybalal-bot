@@ -1,6 +1,6 @@
 import type { Context } from "grammy";
-import { searchSongs } from "../src/dbUtils";
-import { truncateUtf8 } from "./truncateUtf8";
+import { searchSongs } from "../src/dbUtils.ts";
+import { truncateUtf8 } from "./truncateUtf8.ts";
 
 function buildSearchCallback(query: string, page: number): string {
   const suffix = `search::${page}`;

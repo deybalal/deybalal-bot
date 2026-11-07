@@ -1,5 +1,5 @@
 import { Bot } from "grammy";
-import { ensureUser, getAllAlbums } from "../dbUtils";
+import { ensureUser, getAllAlbums } from "../dbUtils.ts";
 
 export function registerAlbumsCommand(bot: Bot) {
   bot.command("albums", async (ctx) => {

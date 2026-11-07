@@ -1,37 +1,59 @@
 import path from "path";
-import type { VideoResolution } from "../../types/types";
+import type { VideoResolution } from "../../types/types.ts";
+import { spawn } from "child_process";
 
 interface FFmpegResult {
   success: boolean;
+  stdout: string;
   stderr: string;
-  exitCode: number;
+  exitCode: number | null;
 }
 
 async function runFFmpeg(
   args: string[],
   timeoutMs = 900_000
 ): Promise<FFmpegResult> {
-  const proc = Bun.spawn(["ffmpeg", "-y", ...args], {
-    stdout: "pipe",
-    stderr: "pipe",
+  return new Promise((resolve, reject) => {
+    const proc = spawn("ffmpeg", ["-y", ...args], {
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+
+    let stdout = "";
+    let stderr = "";
+    let timedOut = false;
+
+    proc.stdout?.on("data", (data: Buffer) => {
+      stdout += data.toString();
+    });
+
+    proc.stderr?.on("data", (data: Buffer) => {
+      stderr += data.toString();
+    });
+
+    const timer = setTimeout(() => {
+      timedOut = true;
+      console.error("FFmpeg timed out!");
+      proc.kill("SIGKILL");
+    }, timeoutMs);
+
+    proc.on("error", (err) => {
+      clearTimeout(timer);
+      reject(err);
+    });
+
+    proc.on("close", (code) => {
+      clearTimeout(timer);
+
+      resolve({
+        success: !timedOut && code === 0,
+        stdout,
+        stderr: timedOut
+          ? `${stderr}\nFFmpeg timed out after ${timeoutMs}ms`
+          : stderr,
+        exitCode: code,
+      });
+    });
   });
-
-  const timer = setTimeout(() => {
-    console.error("FFmpeg timed out!");
-    proc.kill("SIGKILL");
-  }, timeoutMs);
-
-  const stderr = await new Response(proc.stderr).text();
-  const exitCode = await proc.exited;
-  clearTimeout(timer);
-
-  console.log("FFmpeg exit code:", exitCode);
-
-  return {
-    success: exitCode === 0,
-    stderr,
-    exitCode,
-  };
 }
 
 export async function cropAudio(
